@@ -1,1 +1,1 @@
-"""OpenAI-compatible adapter (OpenAI, DeepSeek, Together, Groq, Mistral) via configurable base_url."""
+"""OpenAI-compatible adapter (OpenAI, DeepSeek, Together, Groq) via configurable base_url."""
