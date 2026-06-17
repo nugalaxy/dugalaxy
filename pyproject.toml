@@ -1,0 +1,74 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "dugalaxy"
+version = "0.1.0"
+description = "Author a data template once, generate endless realistic, consistent test data forever — no re-prompting."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "AGPL-3.0-only"
+authors = [{ name = "Sara" }]
+keywords = ["synthetic-data", "test-data", "llm-eval", "fine-tuning", "data-generation"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU Affero General Public License v3",
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development :: Testing",
+]
+
+dependencies = [
+    "typer>=0.12",        # CLI
+    "pydantic>=2.6",      # spec + config validation
+    "pyyaml>=6.0",        # template / config parsing
+    "jinja2>=3.1",        # {{ scenario.x }} interpolation + | json filter
+    "faker>=24.0",        # seeded realistic values
+    "httpx>=0.27",        # provider HTTP calls
+    "rich>=13.7",         # CLI output, run summaries, cost estimates
+]
+
+[project.optional-dependencies]
+api = ["fastapi>=0.110", "uvicorn>=0.29"]
+dev = [
+    "ruff>=0.4",
+    "mypy>=1.10",
+    "pytest>=8.2",
+    "pytest-cov>=5.0",
+    "pre-commit>=3.7",
+    "types-PyYAML",
+]
+
+[project.scripts]
+dugalaxy = "dugalaxy.cli.main:app"
+
+[project.urls]
+Homepage = "https://github.com/m2sarah2/dugalaxy"
+Repository = "https://github.com/m2sarah2/dugalaxy"
+Issues = "https://github.com/m2sarah2/dugalaxy/issues"
+Changelog = "https://github.com/m2sarah2/dugalaxy/blob/main/CHANGELOG.md"
+
+# ──────────────────────────── tooling ────────────────────────────
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/dugalaxy"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "N", "SIM", "RUF"]
+# E/F pyflakes+pycodestyle, I import sort, B bugbear, UP pyupgrade,
+# N naming, SIM simplify, RUF ruff-specific.
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+files = ["src", "tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --cov=dugalaxy --cov-report=term-missing"

@@ -1,0 +1,65 @@
+# ─────────────────────────────────────────────────────────────
+# SECRETS & PRIVATE CONFIG  —  never commit these
+# ─────────────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+dugalaxy.config.yaml          # the REAL config (keys/base_url) — example is committed instead
+*.key
+*.pem
+secrets/
+credentials*.json
+
+# ─────────────────────────────────────────────────────────────
+# OUR PRIVATE STRATEGY DOCS  —  internal only, never public
+# ─────────────────────────────────────────────────────────────
+_internal/
+!_internal/.gitkeep
+
+# ─────────────────────────────────────────────────────────────
+# GENERATED OUTPUT  —  data samples, indexes, caches
+# ─────────────────────────────────────────────────────────────
+output/
+*.jsonl
+!templates/**/*.jsonl         # (keep any sample fixtures shipped intentionally)
+.dugalaxy_cache/
+.dugalaxy_index/
+
+# ─────────────────────────────────────────────────────────────
+# PYTHON
+# ─────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+.python-version
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.log
+
+# ─────────────────────────────────────────────────────────────
+# NODE / NEXT.JS  (studio/)
+# ─────────────────────────────────────────────────────────────
+node_modules/
+.next/
+out/
+studio/.env*
+*.tsbuildinfo
+
+# ─────────────────────────────────────────────────────────────
+# EDITORS / OS
+# ─────────────────────────────────────────────────────────────
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+.DS_Store
+Thumbs.db

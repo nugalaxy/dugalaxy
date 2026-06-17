@@ -1,0 +1,22 @@
+# ─────────────────────────────────────────────────────────────
+# Dugalaxy runtime config — EXAMPLE.
+#
+# Copy this file to `dugalaxy.config.yaml` (which is git-ignored) and edit.
+#   cp dugalaxy.config.example.yaml dugalaxy.config.yaml
+#
+# This file describes the *how* (which model, which provider).
+# Templates describe the *what* (the data shape). Keep them separate.
+#
+# NEVER put an API key in here. We only ever name the ENV VAR that holds it.
+# ─────────────────────────────────────────────────────────────
+
+provider: openai_compatible          # openai_compatible | anthropic | ollama
+model: "gpt-4o-mini"
+base_url: "https://api.openai.com/v1"   # override for DeepSeek / Groq / Together / etc.
+api_key_env: "OPENAI_API_KEY"           # the NAME of the env var — not the key itself
+
+cost_cap_usd: 2.00                       # hard stop; a pre-run estimate is shown and confirmed
+
+# Optional honest pricing (the engine ships a best-effort table; override here if needed):
+# price_per_1k_input: 0.00015
+# price_per_1k_output: 0.00060
