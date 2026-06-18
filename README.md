@@ -31,19 +31,25 @@ Three ideas, together, make this a *tool* rather than a chat session:
 
 ## Quickstart
 
-> Full instructions land as the build progresses. Shape of the magic moment:
-
 ```bash
 pip install dugalaxy
 
-# scaffold a commented starter template
+# scaffold a commented starter template (writes ./my-dataset.yaml)
 dugalaxy init
 
-# generate N varied, consistent, validated samples
-dugalaxy gen security-incident-triage --n 500 --seed 42
+# generate from it — local Ollama by default, so no API key and fully offline
+dugalaxy gen my-dataset.yaml
+
+# or run the flagship example from a repo clone, overriding n and seed:
+dugalaxy gen security-incident-triage --n 100 --seed 42
 ```
 
-Output is written as **JSONL** (the lingua franca of LLM eval/fine-tune datasets) and YAML.
+Before each run Dugalaxy prints what it will do — sample count, seed, target model, an
+estimated cost, and a duplicate-risk warning — and asks for confirmation on paid runs. After
+the run it reports produced/dropped/retries and a **diversity metric** so variety is provable.
+
+Output is written incrementally as **JSONL** (the lingua franca of LLM eval/fine-tune datasets)
+and as a **YAML** dataset envelope. Pick formats with `--format jsonl --format yaml`.
 
 ### Bring your own model
 

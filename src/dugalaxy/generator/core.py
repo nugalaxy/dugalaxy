@@ -190,6 +190,7 @@ def _open_emitters(
     kind: str,
     output_dir: Path,
     formats: Sequence[str],
+    include_meta: bool,
 ) -> tuple[list[SampleEmitter], tuple[Path, ...]]:
     unknown = set(formats) - _KNOWN_FORMATS
     if unknown:
@@ -199,7 +200,7 @@ def _open_emitters(
     files: list[Path] = []
     if "jsonl" in formats:
         path = output_dir / f"{meta.name}.jsonl"
-        emitters.append(stack.enter_context(JsonlEmitter(path)))
+        emitters.append(stack.enter_context(JsonlEmitter(path, include_meta=include_meta)))
         files.append(path)
     if "yaml" in formats:
         path = output_dir / f"{meta.name}.yaml"
@@ -210,6 +211,7 @@ def _open_emitters(
                     dataset_name=meta.dataset_name or meta.name,
                     description=meta.description,
                     kind=kind,
+                    include_meta=include_meta,
                 )
             )
         )
@@ -230,11 +232,13 @@ def generate_dataset(
     max_retries: int | None = None,
     output_dir: Path | None = None,
     output_formats: Sequence[str] | None = None,
+    include_meta: bool = False,
 ) -> RunResult:
     """Run the full generation pipeline, writing samples to disk as they are produced.
 
     Values default from ``template.generation`` but can be overridden per call. A
     template with no generated content is deterministic-only and needs no provider.
+    When *include_meta* is set, each record also carries the scenario facts and seed.
     """
     gen = template.generation
     n = gen.n if n is None else n
@@ -261,7 +265,12 @@ def generate_dataset(
 
     with ExitStack() as stack:
         emitters, files = _open_emitters(
-            stack, meta=template.meta, kind=kind, output_dir=out_dir, formats=formats
+            stack,
+            meta=template.meta,
+            kind=kind,
+            output_dir=out_dir,
+            formats=formats,
+            include_meta=include_meta,
         )
         for index in range(n):
             facts = generate_scenario(template.scenario, seed=effective_seed, index=index)

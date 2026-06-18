@@ -63,6 +63,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Run reporting (`reporting/summary.py`): requested/produced/dropped/retries plus a
   provable diversity metric (unique scenarios + per-variable spread), and a pre-run
   duplicate warning when the enumerable scenario space is smaller than n.
+- CLI (`cli/main.py`): `dugalaxy version`, `dugalaxy init` (scaffolds a commented,
+  runnable starter template), and `dugalaxy gen` — the magic moment. `gen` resolves
+  a template by name or path, applies CLI > config > template precedence, prints a
+  pre-run plan + cost estimate (confirming paid runs, enforcing the cap), runs the
+  pipeline, and prints the run summary. Flags include `--n`, `--seed`, `--model`,
+  `--provider`, `--format`, `--cost-cap`, `--include-meta`, `--no-cache`, `--yes`.
 
 <!--
 RELEASE PROCESS (how "release notes" work on GitHub):
