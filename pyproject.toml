@@ -24,7 +24,9 @@ dependencies = [
     "pydantic>=2.6",      # spec + config validation
     "pyyaml>=6.0",        # template / config parsing
     "jinja2>=3.1",        # {{ scenario.x }} interpolation + | json filter
-    "faker>=24.0",        # seeded realistic values
+    "faker>=40.23,<41",   # seeded realistic values — pinned: its bundled data must
+                          # not shift between releases or the determinism contract
+                          # breaks. Bumping the range requires updating golden tests.
     "httpx>=0.27",        # provider HTTP calls
     "rich>=13.7",         # CLI output, run summaries, cost estimates
 ]

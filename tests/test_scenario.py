@@ -327,10 +327,36 @@ def test_golden_derive_seed() -> None:
     assert derive_seed(42, "x") == 4466663962935946245
 
 
-def test_golden_datetime_recent_is_time_stable() -> None:
-    """A fixed seed yields a fixed timestamp, regardless of when the test runs."""
-    var = FakerVar.model_validate({"type": "faker", "kind": "datetime_recent", "days_back": 90})
-    assert render_faker(var, 42) == "2024-10-30T22:01:40Z"
+# Exact faker output for seed=42 under the pinned Faker range. Most kinds draw
+# from Faker's bundled data, which shifts between releases — so this is both the
+# determinism guard AND the tripwire for an accidental Faker upgrade. If Faker is
+# bumped (see pyproject.toml) and any value here changes, update it deliberately.
+GOLDEN_FAKER = {
+    "datetime_recent": "2024-10-30T22:01:40Z",  # days_back=90; anchored, time-stable
+    "domain_name": "rodriguez.com",
+    "email": "johnsonjoshua@example.org",
+    "file_path": "/face/site.flac",
+    "hostname": "email-10.hill.net",
+    "ipv4": "129.153.198.180",
+    "mac_address": "22:39:0c:8c:7d:72",
+    "name": "Allison Hill",
+    "sha256": "93446f17ed6457b1cbbee6e7fdb203dc137bcc0f1ac76a00d0eaa5fd091c2c29",
+    "uuid4": "bdd640fb-0667-4ad1-9c80-317fa3b1799d",
+}
+
+
+def test_golden_faker_covers_every_kind() -> None:
+    """The golden table must include every whitelisted kind (so none drifts unguarded)."""
+    assert set(GOLDEN_FAKER) == FAKER_KINDS
+
+
+@pytest.mark.parametrize("kind", sorted(GOLDEN_FAKER))
+def test_golden_faker_values(kind: str) -> None:
+    if kind == "datetime_recent":
+        var = FakerVar.model_validate({"type": "faker", "kind": kind, "days_back": 90})
+    else:
+        var = FakerVar(type="faker", kind=kind)
+    assert render_faker(var, 42) == GOLDEN_FAKER[kind]
 
 
 def test_golden_flagship_facts() -> None:
