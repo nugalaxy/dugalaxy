@@ -134,24 +134,33 @@ REQUEST = CompletionRequest(
 )
 
 
+FINGERPRINT = "openai_compatible|https://api.openai.com/v1/chat/completions|gpt-4o-mini"
+
+
 def test_cache_key_is_stable_and_input_sensitive() -> None:
-    key = ResponseCache.make_key(REQUEST, "gpt-4o-mini")
-    assert key == ResponseCache.make_key(REQUEST, "gpt-4o-mini")
+    key = ResponseCache.make_key(REQUEST, FINGERPRINT)
+    assert key == ResponseCache.make_key(REQUEST, FINGERPRINT)
     other = CompletionRequest(
         system="sys", messages=(Message("user", "different"),), max_tokens=100
     )
-    assert key != ResponseCache.make_key(other, "gpt-4o-mini")
-    assert key != ResponseCache.make_key(REQUEST, "gpt-4o")  # model is part of the key
+    assert key != ResponseCache.make_key(other, FINGERPRINT)
+
+
+def test_cache_key_distinguishes_backends_with_same_model() -> None:
+    """Same model string, different endpoints => different keys (no collision)."""
+    fp_a = "openai_compatible|https://api.openai.com/v1/chat/completions|llama3.2"
+    fp_b = "openai_compatible|https://my-proxy.local/v1/chat/completions|llama3.2"
+    assert ResponseCache.make_key(REQUEST, fp_a) != ResponseCache.make_key(REQUEST, fp_b)
 
 
 def test_cache_miss_returns_none(tmp_path: Path) -> None:
     cache = ResponseCache(tmp_path / "cache")
-    assert cache.get(ResponseCache.make_key(REQUEST, "m")) is None
+    assert cache.get(ResponseCache.make_key(REQUEST, FINGERPRINT)) is None
 
 
 def test_cache_hit_roundtrips_completion(tmp_path: Path) -> None:
     cache = ResponseCache(tmp_path / "cache")
-    key = ResponseCache.make_key(REQUEST, "m")
+    key = ResponseCache.make_key(REQUEST, FINGERPRINT)
     completion = Completion(text="cached reply", usage=Usage(input_tokens=11, output_tokens=4))
     cache.put(key, completion)
 
@@ -164,7 +173,26 @@ def test_cache_hit_roundtrips_completion(tmp_path: Path) -> None:
 
 def test_cache_persists_across_instances(tmp_path: Path) -> None:
     directory = tmp_path / "cache"
-    key = ResponseCache.make_key(REQUEST, "m")
+    key = ResponseCache.make_key(REQUEST, FINGERPRINT)
     ResponseCache(directory).put(key, Completion(text="persisted"))
     # A fresh cache pointed at the same dir still sees it (survives across runs).
     assert ResponseCache(directory).get(key) is not None
+
+
+def test_cache_corrupted_entry_is_treated_as_miss(tmp_path: Path) -> None:
+    """A partial write (e.g. a crash mid-run) must degrade to a miss, not crash."""
+    cache = ResponseCache(tmp_path / "cache")
+    key = ResponseCache.make_key(REQUEST, FINGERPRINT)
+    (tmp_path / "cache" / f"{key}.json").write_text('{"text": "half', encoding="utf-8")
+    assert cache.get(key) is None
+    # And the entry can be rewritten cleanly afterwards.
+    cache.put(key, Completion(text="recovered"))
+    hit = cache.get(key)
+    assert hit is not None and hit.text == "recovered"
+
+
+def test_cache_put_leaves_no_temp_files(tmp_path: Path) -> None:
+    directory = tmp_path / "cache"
+    cache = ResponseCache(directory)
+    cache.put(ResponseCache.make_key(REQUEST, FINGERPRINT), Completion(text="x"))
+    assert list(directory.glob("*.tmp")) == []

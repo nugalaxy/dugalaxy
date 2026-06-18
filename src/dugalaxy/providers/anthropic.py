@@ -30,6 +30,7 @@ class AnthropicProvider(TextProvider):
     ) -> None:
         self.model = model
         self._url = base_url.rstrip("/") + "/v1/messages"
+        self.fingerprint = f"anthropic|{self._url}|{model}"
         self._headers = {
             "x-api-key": api_key,
             "anthropic-version": api_version,

@@ -53,9 +53,15 @@ class Completion:
 
 
 class TextProvider(ABC):
-    """The one interface the generator talks to. Concrete adapters set ``model``."""
+    """The one interface the generator talks to.
+
+    Concrete adapters set ``model`` and ``fingerprint`` (a stable string identifying
+    the backend — provider, endpoint, and model — used as part of the cache key so
+    the same model served by two different endpoints never collides).
+    """
 
     model: str
+    fingerprint: str
 
     @abstractmethod
     def complete(self, request: CompletionRequest) -> Completion:

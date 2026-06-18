@@ -45,8 +45,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   CLI flags > config file > defaults; unknown fields and bad values fail legibly.
 - Cost (`cost/`): pre-run token/cost estimate with a best-effort price table
   (config-overridable; unknown models flagged, Ollama free), a hard cap via
-  `enforce_cap`, and a disk-backed response cache keyed by prompt + params so an
-  identical prompt is a cache hit (reproducible prose, no repeat charges).
+  `enforce_cap`, and a disk-backed response cache keyed by prompt + params
+  (including a per-backend fingerprint, so the same model at different endpoints
+  never collides) so an identical prompt is a cache hit (reproducible prose, no
+  repeat charges). Cache writes are atomic and corrupted entries degrade to a miss.
 
 <!--
 RELEASE PROCESS (how "release notes" work on GitHub):

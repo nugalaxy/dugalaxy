@@ -28,6 +28,7 @@ class OllamaProvider(TextProvider):
     ) -> None:
         self.model = model
         self._url = base_url.rstrip("/") + "/api/chat"
+        self.fingerprint = f"ollama|{self._url}|{model}"
         self._client = client or httpx.Client(timeout=timeout)
 
     def complete(self, request: CompletionRequest) -> Completion:

@@ -30,6 +30,7 @@ class OpenAICompatibleProvider(TextProvider):
     ) -> None:
         self.model = model
         self._url = base_url.rstrip("/") + "/chat/completions"
+        self.fingerprint = f"openai_compatible|{self._url}|{model}"
         self._headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
