@@ -49,6 +49,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (including a per-backend fingerprint, so the same model at different endpoints
   never collides) so an identical prompt is a cache hit (reproducible prose, no
   repeat charges). Cache writes are atomic and corrupted entries degrade to a miss.
+- Generator loop (`generator/core.py`): the full per-sample pipeline — scenario →
+  ground → model (cache, then retry up to `max_retries`, else drop) → structural
+  validation → write to disk immediately. The generated block's instruction is
+  merged into the trailing user message so wire roles stay provider-legal
+  (`agent`/`assistant` are emit-time labels, never sent). Disk-backed: only
+  lightweight diversity counters are held in memory.
+- Structural validation (`generator/validation.py`): non-empty, min/max length,
+  `must_mention`, `must_not_contain` — structural only, never semantic.
+- Emitters (`emit/`): JSONL (one object per line), the Echo YAML envelope
+  (streamed incrementally, serialized so content stays valid YAML), and a per-run
+  sample index. Each sample is flushed as produced; nothing accumulates.
+- Run reporting (`reporting/summary.py`): requested/produced/dropped/retries plus a
+  provable diversity metric (unique scenarios + per-variable spread), and a pre-run
+  duplicate warning when the enumerable scenario space is smaller than n.
 
 <!--
 RELEASE PROCESS (how "release notes" work on GitHub):
