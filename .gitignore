@@ -9,6 +9,7 @@ dugalaxy.config.yaml          # the REAL config (keys/base_url) — example is c
 *.pem
 secrets/
 credentials*.json
+Claude.md
 
 # ─────────────────────────────────────────────────────────────
 # OUR PRIVATE STRATEGY DOCS  —  internal only, never public
