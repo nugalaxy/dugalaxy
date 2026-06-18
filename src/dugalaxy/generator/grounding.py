@@ -94,6 +94,19 @@ def _ground_content(content: ContentSpec, role: str | None, facts: dict[str, Any
     return GroundedBlock(role=role, value=None, request=_render_generated(content, facts))
 
 
+def requires_model(output: OutputSpec) -> bool:
+    """True if the output has any ``generated`` block (and so needs a provider).
+
+    A template with no generated content is a deterministic-only run: no provider,
+    no model, and no API key are required.
+    """
+    if isinstance(output, ConversationOutput):
+        return any(isinstance(turn.content, GeneratedContent) for turn in output.turns)
+    if isinstance(output, DocumentOutput):
+        return isinstance(output.content, GeneratedContent)
+    return False
+
+
 def ground_output(output: OutputSpec, facts: dict[str, Any]) -> GroundedOutput:
     """Ground a template's output spec against one sample's facts."""
     if isinstance(output, ConversationOutput):

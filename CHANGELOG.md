@@ -35,7 +35,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Grounding (`generator/grounding.py`): renders a sample's facts into the system
   prompt and content blocks — fixed blocks filled by the engine, generated blocks
   carrying the model prompt plus structural checks with `must_mention` /
-  `must_not_contain` references resolved to the actual facts.
+  `must_not_contain` references resolved to the actual facts. `requires_model`
+  detects deterministic-only templates (no `generated` block).
+- Provider layer (`providers/`): one `TextProvider` interface with adapters for
+  `openai_compatible` (covers OpenAI/DeepSeek/Gemini/Groq/Together via `base_url`),
+  `anthropic`, and `ollama` (local, no key). `build_provider` constructs from
+  config; API keys are resolved from named environment variables only, never disk.
+- Runtime config (`config/`): `Config` model and `load_config` with precedence
+  CLI flags > config file > defaults; unknown fields and bad values fail legibly.
+- Cost (`cost/`): pre-run token/cost estimate with a best-effort price table
+  (config-overridable; unknown models flagged, Ollama free), a hard cap via
+  `enforce_cap`, and a disk-backed response cache keyed by prompt + params so an
+  identical prompt is a cache hit (reproducible prose, no repeat charges).
 
 <!--
 RELEASE PROCESS (how "release notes" work on GitHub):

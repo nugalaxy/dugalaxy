@@ -8,6 +8,7 @@ from dugalaxy.generator.grounding import (
     GeneratedRequest,
     GroundedOutput,
     ground_output,
+    requires_model,
 )
 from dugalaxy.scenario import generate_scenario
 from dugalaxy.template.loader import load_template
@@ -144,6 +145,33 @@ def test_grounding_is_deterministic() -> None:
     spec = load_template(FLAGSHIP)
     facts = generate_scenario(spec.scenario, seed=7, index=3)
     assert ground_output(spec.output, facts) == ground_output(spec.output, facts)
+
+
+# ── deterministic-only detection ──────────────────────────────────────────────
+
+
+def test_requires_model_true_when_generated_present() -> None:
+    spec = load_template(FLAGSHIP)
+    assert requires_model(spec.output) is True
+
+
+def test_requires_model_false_for_all_fixed_conversation() -> None:
+    output = _output(
+        {
+            "type": "conversation",
+            "turns": [{"role": "user", "content": {"type": "fixed", "value": "hi"}}],
+        }
+    )
+    assert requires_model(output) is False
+
+
+def test_requires_model_document_variants() -> None:
+    fixed_doc = _output({"type": "document", "content": {"type": "fixed", "value": {"k": "v"}}})
+    generated_doc = _output(
+        {"type": "document", "content": {"type": "generated", "instruction": "write"}}
+    )
+    assert requires_model(fixed_doc) is False
+    assert requires_model(generated_doc) is True
 
 
 # ── validity trap end-to-end (nasty values through the whole pipeline) ─────────
