@@ -18,7 +18,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   spec, failing fast before any run with legible errors for missing variable
   references and dependency cycles among composite variables.
 - Pre-run error types (`template/errors.py`): `TemplateLoadError`,
-  `MissingReferenceError`, `CyclicDependencyError`.
+  `MissingReferenceError`, `CyclicDependencyError`, `UnknownFakerKindError`.
+- Deterministic scenario engine (`scenario/`): seeded per-sample/per-variable
+  generation of all primitive types (`choice`, `weighted_choice`, `range`,
+  `sequence`, `faker`) and composites (`computed`, `object`), with topological
+  dependency resolution and cycle/missing-reference detection. Seeds are derived
+  with SHA-256 so facts reproduce across runs, processes, and over calendar time;
+  faker is seeded per-variable, and `datetime_recent` is anchored to a fixed,
+  overridable reference time (no wall-clock drift). Faker whitelist:
+  `datetime_recent`, `ipv4`, `name`, `email`, `uuid4`, `domain_name`,
+  `mac_address`, plus security kinds `sha256`, `file_path`, `hostname`.
 
 <!--
 RELEASE PROCESS (how "release notes" work on GitHub):

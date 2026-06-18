@@ -15,3 +15,7 @@ class MissingReferenceError(DugalaxyError):
 
 class CyclicDependencyError(DugalaxyError):
     """Composite variables (computed/object) have a circular dependency."""
+
+
+class UnknownFakerKindError(DugalaxyError):
+    """A ``faker`` variable specifies a ``kind`` that is not in the curated whitelist."""

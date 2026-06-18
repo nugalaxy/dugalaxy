@@ -22,19 +22,23 @@ from .spec import (
 _VAR_REF_RE = re.compile(r"\{\{\s*scenario\.(\w+)")
 
 
-def _extract_refs(value: Any) -> set[str]:
-    """Return all ``scenario.X`` variable names referenced anywhere in *value*."""
+def extract_refs(value: Any) -> set[str]:
+    """Return all ``scenario.X`` variable names referenced anywhere in *value*.
+
+    Recurses into dicts and lists so it works for both ``computed`` (string) and
+    ``object`` (nested map) variable definitions.
+    """
     if isinstance(value, str):
         return set(_VAR_REF_RE.findall(value))
     if isinstance(value, dict):
         refs: set[str] = set()
         for v in value.values():
-            refs |= _extract_refs(v)
+            refs |= extract_refs(v)
         return refs
     if isinstance(value, list):
         refs = set()
         for item in value:
-            refs |= _extract_refs(item)
+            refs |= extract_refs(item)
         return refs
     return set()
 
@@ -46,20 +50,20 @@ def _check_content_refs(
 ) -> None:
     """Raise :exc:`MissingReferenceError` if *content* references an undefined variable."""
     if isinstance(content, FixedContent):
-        for ref in _extract_refs(content.value):
+        for ref in extract_refs(content.value):
             if ref not in defined:
                 raise MissingReferenceError(
                     f"{location}: content references undefined variable '{ref}'"
                 )
     else:
-        for ref in _extract_refs(content.instruction):
+        for ref in extract_refs(content.instruction):
             if ref not in defined:
                 raise MissingReferenceError(
                     f"{location}: instruction references undefined variable '{ref}'"
                 )
         if content.validation:
             for item in content.validation.must_mention:
-                for ref in _extract_refs(item):
+                for ref in extract_refs(item):
                     if ref not in defined:
                         raise MissingReferenceError(
                             f"{location}: must_mention references undefined variable '{ref}'"
@@ -73,7 +77,7 @@ def _check_references(spec: TemplateSpec) -> None:
     # Composite variable definitions
     for var_name, var in spec.scenario.variables.items():
         if isinstance(var, (ComputedVar, ObjectVar)):
-            for ref in _extract_refs(var.value):
+            for ref in extract_refs(var.value):
                 if ref not in defined:
                     raise MissingReferenceError(
                         f"Variable '{var_name}' references undefined variable '{ref}'"
@@ -83,7 +87,7 @@ def _check_references(spec: TemplateSpec) -> None:
     output = spec.output
     if isinstance(output, ConversationOutput):
         if output.system_prompt:
-            for ref in _extract_refs(output.system_prompt):
+            for ref in extract_refs(output.system_prompt):
                 if ref not in defined:
                     raise MissingReferenceError(
                         f"output.system_prompt references undefined variable '{ref}'"
@@ -102,7 +106,7 @@ def _check_no_cycles(spec: TemplateSpec) -> None:
     deps: dict[str, set[str]] = {name: set() for name in defined}
     for var_name, var in spec.scenario.variables.items():
         if isinstance(var, (ComputedVar, ObjectVar)):
-            deps[var_name] = _extract_refs(var.value) & defined
+            deps[var_name] = extract_refs(var.value) & defined
 
     # DFS-based cycle detection (three-colour algorithm)
     white, gray, black = 0, 1, 2
