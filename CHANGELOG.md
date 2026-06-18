@@ -28,6 +28,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   overridable reference time (no wall-clock drift). Faker whitelist:
   `datetime_recent`, `ipv4`, `name`, `email`, `uuid4`, `domain_name`,
   `mac_address`, plus security kinds `sha256`, `file_path`, `hostname`.
+- Interpolation engine (`generator/interpolation.py`): the shared Jinja2
+  `{{ scenario.x }}` renderer and the `| json` filter, which serializes structured
+  payloads with `json.dumps` so values containing quotes, backslashes, or newlines
+  can never produce invalid JSON. Scenario composites now reuse this engine.
+- Grounding (`generator/grounding.py`): renders a sample's facts into the system
+  prompt and content blocks — fixed blocks filled by the engine, generated blocks
+  carrying the model prompt plus structural checks with `must_mention` /
+  `must_not_contain` references resolved to the actual facts.
 
 <!--
 RELEASE PROCESS (how "release notes" work on GitHub):

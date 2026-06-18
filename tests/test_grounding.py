@@ -1,0 +1,173 @@
+"""Tests for grounding scenario facts into prompts and payloads — Milestone 2 acceptance."""
+
+import json
+from pathlib import Path
+from typing import Any
+
+from dugalaxy.generator.grounding import (
+    GeneratedRequest,
+    GroundedOutput,
+    ground_output,
+)
+from dugalaxy.scenario import generate_scenario
+from dugalaxy.template.loader import load_template
+from dugalaxy.template.spec import OutputSpec
+
+FLAGSHIP = Path(__file__).parent.parent / "templates" / "security-incident-triage.yaml"
+
+
+def _output(spec: dict[str, Any]) -> OutputSpec:
+    from pydantic import TypeAdapter
+
+    return TypeAdapter(OutputSpec).validate_python(spec)
+
+
+# ── system prompt + fixed/generated grounding ─────────────────────────────────
+
+
+def test_system_prompt_injects_facts() -> None:
+    output = _output(
+        {
+            "type": "conversation",
+            "system_prompt": "User is {{ scenario.user }}.",
+            "turns": [{"role": "user", "content": {"type": "fixed", "value": "hi"}}],
+        }
+    )
+    grounded = ground_output(output, {"user": "alice"})
+    assert grounded.system_prompt == "User is alice."
+
+
+def test_fixed_string_block_is_rendered() -> None:
+    output = _output(
+        {
+            "type": "conversation",
+            "turns": [
+                {"role": "user", "content": {"type": "fixed", "value": "Hello {{ scenario.x }}"}}
+            ],
+        }
+    )
+    grounded = ground_output(output, {"x": "there"})
+    assert grounded.blocks[0].value == "Hello there"
+    assert grounded.blocks[0].request is None
+    assert grounded.blocks[0].role == "user"
+
+
+def test_fixed_map_block_keeps_structure() -> None:
+    output = _output(
+        {
+            "type": "document",
+            "content": {
+                "type": "fixed",
+                "value": {"user": "{{ scenario.u }}", "event": "login"},
+            },
+        }
+    )
+    grounded = ground_output(output, {"u": "bob"})
+    assert grounded.kind == "document"
+    assert grounded.blocks[0].value == {"user": "bob", "event": "login"}
+    assert grounded.blocks[0].role is None
+
+
+def test_generated_block_grounds_instruction_and_validation() -> None:
+    output = _output(
+        {
+            "type": "conversation",
+            "turns": [
+                {
+                    "role": "agent",
+                    "content": {
+                        "type": "generated",
+                        "instruction": "Discuss {{ scenario.proc }}.",
+                        "max_tokens": 200,
+                        "validation": {
+                            "min_length": 50,
+                            "must_mention": ["{{ scenario.proc }}"],
+                            "must_not_contain": ["As an AI"],
+                        },
+                    },
+                }
+            ],
+        }
+    )
+    grounded = ground_output(output, {"proc": "powershell.exe"})
+    block = grounded.blocks[0]
+    assert block.value is None
+    request = block.request
+    assert isinstance(request, GeneratedRequest)
+    assert request.instruction == "Discuss powershell.exe."
+    assert request.max_tokens == 200
+    assert request.min_length == 50
+    assert request.must_mention == ("powershell.exe",)  # reference resolved to the fact
+    assert request.must_not_contain == ("As an AI",)
+
+
+def test_generated_block_without_validation() -> None:
+    output = _output(
+        {
+            "type": "conversation",
+            "turns": [{"role": "agent", "content": {"type": "generated", "instruction": "Reply."}}],
+        }
+    )
+    grounded = ground_output(output, {})
+    request = grounded.blocks[0].request
+    assert isinstance(request, GeneratedRequest)
+    assert request.min_length is None
+    assert request.must_mention == ()
+    assert request.must_not_contain == ()
+
+
+# ── flagship end-to-end grounding ─────────────────────────────────────────────
+
+
+def test_flagship_grounding_produces_valid_embedded_json() -> None:
+    """The user turn embeds the edr_payload object as JSON inside prose — it must parse."""
+    spec = load_template(FLAGSHIP)
+    facts = generate_scenario(spec.scenario, seed=42, index=0)
+    grounded = ground_output(spec.output, facts)
+
+    assert isinstance(grounded, GroundedOutput)
+    assert grounded.kind == "conversation"
+    assert grounded.system_prompt is not None
+    assert facts["username"] in grounded.system_prompt
+
+    user_block = grounded.blocks[0]
+    assert isinstance(user_block.value, str)
+    embedded = user_block.value.split("```json\n", 1)[1].split("\n```", 1)[0]
+    assert json.loads(embedded) == facts["edr_payload"]
+
+    agent_request = grounded.blocks[1].request
+    assert isinstance(agent_request, GeneratedRequest)
+    assert agent_request.must_mention == (facts["parent_process"],)
+
+
+def test_grounding_is_deterministic() -> None:
+    spec = load_template(FLAGSHIP)
+    facts = generate_scenario(spec.scenario, seed=7, index=3)
+    assert ground_output(spec.output, facts) == ground_output(spec.output, facts)
+
+
+# ── validity trap end-to-end (nasty values through the whole pipeline) ─────────
+
+
+def test_nasty_scenario_value_stays_valid_json_in_prose() -> None:
+    """A scenario value with quotes/backslashes/newlines must serialize validly."""
+    nasty = 'cmd "x" \\ end\nNEXT'
+    output = _output(
+        {
+            "type": "conversation",
+            "turns": [
+                {
+                    "role": "user",
+                    "content": {
+                        "type": "fixed",
+                        "value": "```json\n{{ scenario.payload | json(indent=2) }}\n```",
+                    },
+                }
+            ],
+        }
+    )
+    facts = {"payload": {"command_line": nasty}}
+    grounded = ground_output(output, facts)
+    assert isinstance(grounded.blocks[0].value, str)
+    embedded = grounded.blocks[0].value.split("```json\n", 1)[1].split("\n```", 1)[0]
+    assert json.loads(embedded) == {"command_line": nasty}
