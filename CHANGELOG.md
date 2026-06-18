@@ -61,8 +61,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (streamed incrementally, serialized so content stays valid YAML), and a per-run
   sample index. Each sample is flushed as produced; nothing accumulates.
 - Run reporting (`reporting/summary.py`): requested/produced/dropped/retries plus a
-  provable diversity metric (unique scenarios + per-variable spread), and a pre-run
-  duplicate warning when the enumerable scenario space is smaller than n.
+  provable diversity metric and a pre-run duplicate warning when the enumerable
+  scenario space is smaller than n. The headline diversity ratio counts distinct
+  combinations of the **categorical axes** (`choice`/`weighted_choice`) — the same
+  axes the duplicate warning uses — so high-cardinality variables (timestamps,
+  UUIDs, wide ranges) cannot inflate it; those still appear in the per-variable
+  spread.
 - CLI (`cli/main.py`): `dugalaxy version`, `dugalaxy init` (scaffolds a commented,
   runnable starter template), and `dugalaxy gen` — the magic moment. `gen` resolves
   a template by name or path, applies CLI > config > template precedence, prints a

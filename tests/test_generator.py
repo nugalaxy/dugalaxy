@@ -244,6 +244,35 @@ def test_unknown_output_format_raises(tmp_path: Path) -> None:
         )
 
 
+def test_diversity_reflects_categorical_axes_not_faker(tmp_path: Path) -> None:
+    """End-to-end: a fixed categorical axis + a varying faker reads as low-diversity."""
+    template = TemplateSpec.model_validate(
+        {
+            "meta": {"name": "div", "description": "", "version": "1.0"},
+            "scenario": {
+                "variables": {
+                    "region": {"type": "choice", "values": ["us"]},  # never varies
+                    "ip": {"type": "faker", "kind": "ipv4"},  # unique every sample
+                }
+            },
+            "output": {
+                "type": "document",
+                "content": {
+                    "type": "fixed",
+                    "value": {"region": "{{ scenario.region }}", "ip": "{{ scenario.ip }}"},
+                },
+            },
+            "generation": {"n": 5, "seed": 1, "output_formats": ["jsonl"]},
+        }
+    )
+    result = generate_dataset(template, provider=None, output_dir=tmp_path)
+    assert result.summary.produced == 5
+    # Only the categorical axis counts: one combo, despite five distinct IPs.
+    assert result.summary.unique_scenarios == 1
+    assert result.summary.diversity_ratio == 0.2
+    assert result.summary.per_variable_spread["ip"] == 5
+
+
 def test_pre_run_duplicate_warning_surfaced(tmp_path: Path) -> None:
     template = TemplateSpec.model_validate(
         {

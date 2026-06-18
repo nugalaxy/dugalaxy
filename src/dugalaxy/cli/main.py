@@ -276,8 +276,8 @@ def _print_summary(result: RunResult) -> None:
         f"   dropped {summary.dropped}   retries {summary.total_retries}"
     )
     console.print(
-        f"  diversity: {summary.unique_scenarios} unique scenarios "
-        f"({summary.diversity_ratio:.0%} of produced)"
+        f"  diversity: {summary.unique_scenarios} unique scenario combinations "
+        f"across the categorical axes ({summary.diversity_ratio:.0%} of produced)"
     )
     for path in result.output_files:
         console.print(f"  wrote {path}")

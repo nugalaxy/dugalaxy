@@ -4,6 +4,7 @@ from typing import Any
 
 from dugalaxy.reporting.summary import (
     DiversityTracker,
+    categorical_variable_names,
     duplicate_warning,
     scenario_space_size,
 )
@@ -60,11 +61,65 @@ def test_no_duplicate_warning_without_categoricals() -> None:
     assert duplicate_warning(scenario, n=10_000) is None
 
 
+# ── categorical axes ──────────────────────────────────────────────────────────
+
+
+def test_categorical_variable_names() -> None:
+    scenario = _scenario(
+        {
+            "a": {"type": "choice", "values": ["x"]},
+            "b": {"type": "weighted_choice", "values": {"p": 1.0}},
+            "idx": {"type": "range", "min": 1, "max": 9},
+            "ts": {"type": "faker", "kind": "ipv4"},
+        }
+    )
+    assert categorical_variable_names(scenario) == {"a", "b"}
+
+
 # ── diversity tracker ─────────────────────────────────────────────────────────
 
 
+def test_diversity_ignores_high_cardinality_variables() -> None:
+    """The headline fix: timestamps/UUIDs must NOT inflate diversity.
+
+    Here the only categorical axis ('proc') never varies, so the run is genuinely
+    low-diversity even though every sample has a unique timestamp/index.
+    """
+    tracker = DiversityTracker(categorical={"proc"})
+    for i in range(5):
+        tracker.record({"proc": "powershell.exe", "idx": i, "ts": f"2024-01-0{i}T00:00:00Z"})
+    summary = tracker.summary(requested=5, dropped=0, total_retries=0)
+    assert summary.unique_scenarios == 1
+    assert summary.diversity_ratio == 0.2  # 1 unique categorical combo / 5 produced
+    # the high-cardinality variables still show up in the per-variable spread
+    assert summary.per_variable_spread == {"proc": 1, "idx": 5, "ts": 5}
+
+
+def test_diversity_counts_categorical_combinations() -> None:
+    tracker = DiversityTracker(categorical={"proc", "verdict"})
+    rows = [
+        {"proc": "a", "verdict": "tp", "ts": "t0"},
+        {"proc": "a", "verdict": "tp", "ts": "t1"},  # same categorical combo as row 0
+        {"proc": "b", "verdict": "fp", "ts": "t2"},
+    ]
+    for row in rows:
+        tracker.record(row)
+    summary = tracker.summary(requested=3, dropped=0, total_retries=0)
+    assert summary.unique_scenarios == 2  # {a,tp} and {b,fp}
+
+
+def test_diversity_falls_back_to_all_vars_without_categoricals() -> None:
+    """A template with no categorical axes (all faker) is not misreported as flat."""
+    tracker = DiversityTracker(categorical=set())
+    for i in range(4):
+        tracker.record({"ts": f"t{i}"})
+    summary = tracker.summary(requested=4, dropped=0, total_retries=0)
+    assert summary.unique_scenarios == 4
+    assert summary.diversity_ratio == 1.0
+
+
 def test_diversity_all_unique() -> None:
-    tracker = DiversityTracker()
+    tracker = DiversityTracker(categorical={"proc", "idx"})
     for i in range(5):
         tracker.record({"proc": "powershell.exe", "idx": i})
     summary = tracker.summary(requested=5, dropped=0, total_retries=0)

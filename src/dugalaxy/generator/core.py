@@ -16,7 +16,12 @@ from pathlib import Path
 from dugalaxy.cost.cache import ResponseCache
 from dugalaxy.emit import IndexEmitter, JsonlEmitter, Sample, SampleEmitter, YamlEmitter
 from dugalaxy.providers.base import CompletionRequest, Message, TextProvider
-from dugalaxy.reporting.summary import DiversityTracker, RunSummary, duplicate_warning
+from dugalaxy.reporting.summary import (
+    DiversityTracker,
+    RunSummary,
+    categorical_variable_names,
+    duplicate_warning,
+)
 from dugalaxy.scenario import generate_scenario
 from dugalaxy.template.errors import DugalaxyError
 from dugalaxy.template.spec import ConversationOutput, Meta, TemplateSpec
@@ -259,7 +264,7 @@ def generate_dataset(
         )
 
     kind = "conversation" if isinstance(template.output, ConversationOutput) else "document"
-    tracker = DiversityTracker()
+    tracker = DiversityTracker(categorical_variable_names(template.scenario))
     dropped = 0
     total_retries = 0
 
