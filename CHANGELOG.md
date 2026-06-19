@@ -74,6 +74,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pipeline, and prints the run summary. Flags include `--n`, `--seed`, `--model`,
   `--provider`, `--format`, `--cost-cap`, `--include-meta`, `--no-cache`, `--yes`.
 
+### Added
+- `dugalaxy list` lists the templates Dugalaxy can find — bundled examples plus any in
+  your working directory (`template/discovery.py`).
+- `dugalaxy gen` with no template argument now prompts you to pick one interactively;
+  run non-interactively, it errors with guidance instead of hanging.
+- A branded welcome panel (with a galaxy mark, degrading to ASCII where the terminal
+  can't render the emoji) on bare `dugalaxy`, plus a project logo (`assets/logo.svg`)
+  embedded in the README.
+
 ### Changed
 - Flagship example is now **`customer-support`** (a relatable, non-domain-specific
   conversation template), shipped **inside the package** at
