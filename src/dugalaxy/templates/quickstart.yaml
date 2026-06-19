@@ -61,4 +61,6 @@ generation:
   n: 10
   seed: 42
   output_dir: "./output/quickstart"
-  output_formats: [jsonl, yaml]
+  output_formats:
+    - jsonl
+    - yaml

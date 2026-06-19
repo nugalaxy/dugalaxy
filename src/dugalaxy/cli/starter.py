@@ -26,11 +26,17 @@ scenario:
   variables:
     product:
       type: choice                     # pick one, uniformly
-      values: ["Nimbus CLI", "Nimbus Cloud", "Nimbus Desktop"]
+      values:
+        - "Nimbus CLI"
+        - "Nimbus Cloud"
+        - "Nimbus Desktop"
 
     issue:
       type: weighted_choice            # pick one, with weights (some issues are commoner)
-      values: { login: 0.5, billing: 0.3, crashes: 0.2 }
+      values:
+        login: 0.5
+        billing: 0.3
+        crashes: 0.2
 
     ticket_number:
       type: range                      # integer, inclusive on both ends
@@ -83,12 +89,15 @@ output:
         max_tokens: 400
         validation:                    # structural checks only — never semantic
           min_length: 40
-          must_mention: ["{{ scenario.ticket_id }}"]
+          must_mention:
+            - "{{ scenario.ticket_id }}"
 
 generation:
   n: 10
   seed: 42
   max_retries: 3
   output_dir: "./output/__NAME__"
-  output_formats: [jsonl, yaml]
+  output_formats:
+    - jsonl
+    - yaml
 """
