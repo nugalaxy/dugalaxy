@@ -2,9 +2,10 @@
 # Dugalaxy flagship example — customer-support conversations.
 #
 # It generates endless varied, *consistent* support dialogues: a seeded engine
-# invents the ground-truth ticket facts, serializes them into a valid JSON payload,
-# and hands them to the model as ground truth — the model only writes the agent's
-# prose reply. Same seed → same facts, forever.
+# invents the ground-truth ticket facts, serializes them into a valid JSON account
+# record, and hands that to the agent as ground truth (in the system prompt). The
+# customer speaks in natural language; the model writes only the agent's reply.
+# Same seed → same facts, forever.
 #
 #   Try it:   dugalaxy gen customer-support --n 5 --seed 42
 #
@@ -34,9 +35,9 @@ scenario:
       values:
         login: 0.35
         billing: 0.25
-        crash: 0.20
-        feature-request: 0.10
-        data-export: 0.10
+        crashes: 0.20
+        performance: 0.10
+        data export: 0.10
 
     ticket_number:
       type: range                      # integer, inclusive on both ends
@@ -60,46 +61,48 @@ scenario:
       type: computed                   # build a string by interpolating other variables
       value: "TICKET-{{ scenario.ticket_number }}"
 
-    payload:
+    account_record:
       type: object                     # a structured map — serialized to VALID JSON for you
       value:                           # (never paste values into a JSON string yourself)
         ticket_id: "{{ scenario.ticket_id }}"
+        customer: "{{ scenario.customer }}"
+        email: "{{ scenario.email }}"
         product: "{{ scenario.product }}"
         plan: "{{ scenario.plan }}"
         category: "{{ scenario.issue }}"
-        customer: "{{ scenario.customer }}"
-        email: "{{ scenario.email }}"
         opened_at: "{{ scenario.opened_at }}"
 
 output:
   type: conversation
+  # The agent's ground truth lives here — the account record it would see in the
+  # support tool. The customer never sees or sends this; they just talk (below).
   system_prompt: |
     You are a friendly, concise support agent for {{ scenario.product }}.
-    Be helpful and specific. Do NOT invent facts. Ground truth (do not contradict):
-      ticket:   {{ scenario.ticket_id }}
-      product:  {{ scenario.product }}
-      plan:     {{ scenario.plan }}
-      issue:    {{ scenario.issue }}
-      customer: {{ scenario.customer }}
+    Use the customer's account record below as ground truth — do not contradict it,
+    and do not invent details that aren't in it. Greet the customer by name, cite the
+    ticket id, and help with their issue.
+    Account record:
+    ```json
+    {{ scenario.account_record | json(indent=2) }}
+    ```
   turns:
     - role: user
       content:
         type: fixed                    # the engine fills this; the model never writes it
         value: |
-          Hi, I'm {{ scenario.customer }} on the {{ scenario.plan }} plan with a
-          {{ scenario.issue }} issue on {{ scenario.product }}. Here is my ticket:
-          ```json
-          {{ scenario.payload | json(indent=2) }}
-          ```
-          Can you help?
+          Hi, I'm {{ scenario.customer }}. I'm on the {{ scenario.plan }} plan for
+          {{ scenario.product }}, and I'm reaching out because I'm having trouble with
+          {{ scenario.issue }}. Could you help me get this sorted? You can reach me at
+          {{ scenario.email }}. Thanks!
 
     - role: agent                      # 'agent' (not 'assistant') — matches common seeders
       content:
-        type: generated                # the MODEL writes this, grounded by the facts above
+        type: generated                # the MODEL writes this, grounded by the record above
         instruction: |
-          Acknowledge ticket {{ scenario.ticket_id }} by name and help {{ scenario.customer }}
-          with their {{ scenario.issue }} issue on {{ scenario.product }} ({{ scenario.plan }}
-          plan). Ask one clarifying question if needed. Keep it under 6 sentences.
+          Reply to {{ scenario.customer }}. Acknowledge ticket {{ scenario.ticket_id }} by
+          name, show you understand they're having trouble with {{ scenario.issue }} on
+          {{ scenario.product }} ({{ scenario.plan }} plan), and give a concrete next step or
+          one clarifying question. Keep it warm and under 6 sentences.
         max_tokens: 600
         validation:                    # structural checks only — never semantic
           min_length: 80

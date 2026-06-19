@@ -121,7 +121,7 @@ def test_generated_block_without_validation() -> None:
 
 
 def test_flagship_grounding_produces_valid_embedded_json() -> None:
-    """The user turn embeds the ticket payload object as JSON inside prose — it must parse."""
+    """The agent's system prompt embeds the account record as JSON — it must parse."""
     spec = load_template(FLAGSHIP)
     facts = generate_scenario(spec.scenario, seed=42, index=0)
     grounded = ground_output(spec.output, facts)
@@ -131,10 +131,13 @@ def test_flagship_grounding_produces_valid_embedded_json() -> None:
     assert grounded.system_prompt is not None
     assert facts["customer"] in grounded.system_prompt
 
+    embedded = grounded.system_prompt.split("```json\n", 1)[1].split("\n```", 1)[0]
+    assert json.loads(embedded) == facts["account_record"]
+
+    # The customer turn is natural prose — no JSON pasted by the customer.
     user_block = grounded.blocks[0]
     assert isinstance(user_block.value, str)
-    embedded = user_block.value.split("```json\n", 1)[1].split("\n```", 1)[0]
-    assert json.loads(embedded) == facts["payload"]
+    assert "```json" not in user_block.value
 
     agent_request = grounded.blocks[1].request
     assert isinstance(agent_request, GeneratedRequest)

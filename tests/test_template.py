@@ -74,7 +74,7 @@ def test_flagship_scenario_variable_types() -> None:
     assert isinstance(v["ticket_number"], RangeVar)
     assert isinstance(v["opened_at"], FakerVar)
     assert isinstance(v["ticket_id"], ComputedVar)
-    assert isinstance(v["payload"], ObjectVar)
+    assert isinstance(v["account_record"], ObjectVar)
 
 
 def test_flagship_output_structure() -> None:

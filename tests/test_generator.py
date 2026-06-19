@@ -85,10 +85,10 @@ def test_flagship_run_produces_valid_echo_yaml(tmp_path: Path) -> None:
     roles = [turn["role"] for turn in conv["turns"]]
     assert roles == ["user", "agent"]
 
-    # The user turn embeds the ticket payload as JSON inside prose — it must parse.
+    # The customer turn is natural prose grounded in the scenario facts — no JSON blob.
     user_content = conv["turns"][0]["content"]
-    embedded = user_content.split("```json\n", 1)[1].split("\n```", 1)[0]
-    assert json.loads(embedded)["ticket_id"].startswith("TICKET-")
+    assert "Nimbus" in user_content
+    assert "```json" not in user_content
 
 
 def test_flagship_run_writes_jsonl_and_index(tmp_path: Path) -> None:

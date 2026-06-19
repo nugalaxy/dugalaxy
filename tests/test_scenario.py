@@ -303,14 +303,14 @@ def test_flagship_facts_are_consistent() -> None:
     # ticket_id is computed from ticket_number
     assert facts["ticket_id"] == f"TICKET-{facts['ticket_number']}"
 
-    # payload is a serializable dict whose leaves match the scenario facts
-    payload = facts["payload"]
-    assert isinstance(payload, dict)
-    assert payload["ticket_id"] == facts["ticket_id"]
-    assert payload["product"] == facts["product"]
-    assert payload["plan"] == facts["plan"]
-    assert payload["category"] == facts["issue"]
-    assert payload["customer"] == facts["customer"]
+    # account_record is a serializable dict whose leaves match the scenario facts
+    record = facts["account_record"]
+    assert isinstance(record, dict)
+    assert record["ticket_id"] == facts["ticket_id"]
+    assert record["product"] == facts["product"]
+    assert record["plan"] == facts["plan"]
+    assert record["category"] == facts["issue"]
+    assert record["customer"] == facts["customer"]
 
 
 # ── golden values (cross-version reproducibility guard) ───────────────────────
@@ -371,13 +371,13 @@ def test_golden_flagship_facts() -> None:
         "product": "Nimbus Cloud",
         "ticket_number": 8739,
         "ticket_id": "TICKET-8739",
-        "payload": {
+        "account_record": {
             "ticket_id": "TICKET-8739",
+            "customer": "Emily Garcia",
+            "email": "alexanderanderson@example.org",
             "product": "Nimbus Cloud",
             "plan": "enterprise",
             "category": "login",
-            "customer": "Emily Garcia",
-            "email": "alexanderanderson@example.org",
             "opened_at": "2024-12-18T17:31:50Z",
         },
     }
