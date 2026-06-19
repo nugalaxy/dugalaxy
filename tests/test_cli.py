@@ -4,11 +4,13 @@ import json
 from collections.abc import Callable
 from pathlib import Path
 
+import httpx
 import pytest
 from typer.testing import CliRunner
 
 import dugalaxy.cli.main as cli
 from dugalaxy.cli.main import app
+from dugalaxy.providers import OllamaProvider
 from dugalaxy.providers.base import Completion, CompletionRequest, TextProvider
 from dugalaxy.template.loader import load_template
 
@@ -117,6 +119,55 @@ def test_gen_deterministic_only(tmp_path: Path) -> None:
     lines = (out / "det.jsonl").read_text(encoding="utf-8").splitlines()
     assert len(lines) == 4
     assert all(json.loads(line)["event"] == "login" for line in lines)
+
+
+def test_gen_quickstart_needs_no_model(tmp_path: Path) -> None:
+    # The whole point: a stranger with no Ollama and no key gets data, zero prompts.
+    out = tmp_path / "out"
+    result = runner.invoke(app, ["gen", "quickstart", "--output-dir", str(out)])
+
+    assert result.exit_code == 0, result.stdout
+    assert "produced 10/10" in result.stdout
+    lines = (out / "quickstart.jsonl").read_text(encoding="utf-8").splitlines()
+    assert len(lines) == 10
+    record = json.loads(lines[0])
+    assert set(record) == {"id", "name", "email", "plan", "created_at"}
+    assert all(isinstance(value, str) for value in record.values())
+
+
+def test_gen_friendly_error_when_ollama_is_down(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("connection refused", request=request)
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    monkeypatch.setattr(
+        cli,
+        "build_provider",
+        lambda config: OllamaProvider(
+            model="llama3.2", base_url="http://localhost:11434", client=client
+        ),
+    )
+    result = runner.invoke(
+        app,
+        [
+            "gen",
+            "src/dugalaxy/templates/customer-support.yaml",
+            "--n",
+            "1",
+            "--provider",
+            "ollama",
+            "--output-dir",
+            str(tmp_path / "out"),
+        ],
+    )
+    assert result.exit_code == 1
+    # Rich may word-wrap the message across lines, so flatten whitespace before matching.
+    flat = " ".join(result.stderr.split())
+    assert "Ollama doesn't appear to be running" in flat
+    assert "dugalaxy gen quickstart" in flat
+    assert "Traceback" not in result.stderr
 
 
 def test_gen_missing_template_errors() -> None:

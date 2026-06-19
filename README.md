@@ -36,7 +36,10 @@ Three ideas, together, make this a *tool* rather than a chat session:
 ```bash
 pip install dugalaxy
 
-# run the bundled flagship example right away — no clone, no setup files needed:
+# instant — no model, no API key, no config. Produces synthetic profiles to ./output/:
+dugalaxy gen quickstart
+
+# when you want model-written conversations (needs Ollama running or a provider):
 dugalaxy gen customer-support --n 5 --seed 42
 
 # or scaffold your own commented starter template (writes ./my-dataset.yaml):
@@ -44,10 +47,11 @@ dugalaxy init
 dugalaxy gen my-dataset.yaml
 ```
 
-By default Dugalaxy generates against a **local Ollama** model (free and fully offline), so
-the only prerequisite for the commands above is a running [Ollama](https://ollama.com) with a
-model pulled (e.g. `ollama pull llama3.2`). To use a hosted API instead, pass
-`--provider`/`--model` or a config file (see *Bring your own model* below).
+`quickstart` is **fully deterministic** — the seeded engine writes every field, so it needs no
+model at all. Templates with model-written prose (like `customer-support`) generate against a
+**local [Ollama](https://ollama.com)** model by default (free and offline; `ollama pull
+llama3.2`), or any hosted API via `--provider`/`--model` or a config file (see *Bring your own
+model* below).
 
 **Where things live:** templates are resolved as a path, as `./templates/<name>.yaml` in your
 working directory, or from the examples bundled with the package (like `customer-support`).

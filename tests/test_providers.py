@@ -175,6 +175,17 @@ def test_ollama_no_auth_and_parses_message() -> None:
     assert captured["body"]["options"]["num_predict"] == 200
 
 
+def test_ollama_connection_error_is_friendly() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("connection refused", request=request)
+
+    provider = OllamaProvider(
+        model="llama3.2", base_url="http://localhost:11434", client=_client(handler)
+    )
+    with pytest.raises(ProviderError, match="Ollama doesn't appear to be running"):
+        provider.complete(REQUEST)
+
+
 # ── api key resolution ────────────────────────────────────────────────────────
 
 

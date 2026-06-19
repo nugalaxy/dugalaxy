@@ -75,6 +75,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `--provider`, `--format`, `--cost-cap`, `--include-meta`, `--no-cache`, `--yes`.
 
 ### Added
+- **Zero-setup first run:** a bundled, fully deterministic `quickstart` template
+  (`dugalaxy gen quickstart`) produces synthetic profiles with no model, no API key, and
+  no config — it runs instantly straight after `pip install`. Onboarding (welcome banner,
+  README, getting-started, `init`) now leads with it before the model-based example.
 - `dugalaxy list` lists the templates Dugalaxy can find — bundled examples plus any in
   your working directory (`template/discovery.py`).
 - `dugalaxy gen` with no template argument now prompts you to pick one interactively;
@@ -98,6 +102,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Packaging metadata: added the author email and Python 3.10/3.11/3.12 classifiers.
 
 ### Fixed
+- When a model is required but Ollama isn't reachable, the connection failure now reports an
+  actionable message (start Ollama, pick another provider, or run `dugalaxy gen quickstart`)
+  instead of a raw transport error.
 - Unknown-price runs (`cli/main.py`): the confirmation prompt now states **"cost unknown
   for this model — you may be billed"** instead of a generic prompt, so the trust-fatal
   unknown-cost case is explicit. The run still blocks on confirmation as before.

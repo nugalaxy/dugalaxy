@@ -47,6 +47,11 @@ class OllamaProvider(TextProvider):
             headers={"Content-Type": "application/json"},
             payload=payload,
             provider_name="ollama",
+            connect_hint=(
+                "Ollama doesn't appear to be running. Start it (and `ollama pull "
+                f"{self.model}`), pick another provider with --provider/--model, or run "
+                "`dugalaxy gen quickstart` (no model needed)."
+            ),
         )
         try:
             text = data["message"]["content"]

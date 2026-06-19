@@ -5,6 +5,7 @@ is the marketing: it should make the magic moment — one command, endless varie
 grounded samples — obvious and fast.
 """
 
+import contextlib
 import sys
 from importlib.resources import files
 from pathlib import Path
@@ -42,6 +43,23 @@ app = typer.Typer(
     help="Author a data template once, generate endless realistic samples forever.",
     no_args_is_help=False,
 )
+
+
+def _make_output_encoding_safe() -> None:
+    """Degrade un-encodable characters instead of crashing on a legacy console.
+
+    On legacy Windows code pages (e.g. cp1252/cp437) a character the page can't encode
+    would otherwise raise UnicodeEncodeError mid-render and abort the command. Switching
+    the streams to replace-on-error keeps output flowing (a rare glyph becomes ``?``).
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            with contextlib.suppress(ValueError, OSError):
+                reconfigure(errors="replace")
+
+
+_make_output_encoding_safe()
 console = Console()
 err_console = Console(stderr=True)
 
@@ -77,7 +95,8 @@ def _print_welcome() -> None:
         "[dim]Author a data template once, then generate endless varied, grounded\n"
         "samples. No re-prompting.[/dim]\n\n"
         "[bold]Get started[/bold]\n"
-        "  [cyan]dugalaxy gen customer-support[/cyan]   run the bundled example\n"
+        "  [cyan]dugalaxy gen quickstart[/cyan]         instant demo — no setup needed\n"
+        "  [cyan]dugalaxy gen customer-support[/cyan]   model-written chats (needs a provider)\n"
         "  [cyan]dugalaxy init[/cyan]                   scaffold your own template\n"
         "  [cyan]dugalaxy list[/cyan]                   see available templates\n\n"
         "[dim]Docs: https://github.com/m2sarah2/dugalaxy[/dim]"
@@ -135,9 +154,11 @@ def init(
     console.print(f"[green]Created[/green] {path}")
     console.print(f"Next: [bold]dugalaxy gen {path}[/bold]")
     console.print(
-        f"  Runs against local Ollama by default (run [bold]ollama pull llama3.2[/bold] first),\n"
-        f"  or pass [bold]--provider/--model[/bold] for a hosted API. "
-        f"Output is written to [bold]./output/{name}/[/bold]."
+        f"  This template has a model-written turn, so it needs Ollama running "
+        f"([bold]ollama pull llama3.2[/bold]) or a provider via [bold]--provider/--model[/bold].\n"
+        f"  No setup yet? Try [bold]dugalaxy gen quickstart[/bold] — deterministic, no model "
+        f"needed.\n"
+        f"  Output is written to [bold]./output/{name}/[/bold]."
     )
 
 

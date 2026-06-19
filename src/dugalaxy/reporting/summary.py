@@ -112,5 +112,5 @@ def duplicate_warning(scenario: ScenarioSpec, n: int) -> str | None:
     """Pre-run warning when the enumerable scenario space is smaller than *n*."""
     size = scenario_space_size(scenario)
     if size is not None and size < n:
-        return f"scenario space ≈ {size} combos < n={n}; expect duplicate scenarios."
+        return f"scenario space ~{size} combos < n={n}; expect duplicate scenarios."
     return None

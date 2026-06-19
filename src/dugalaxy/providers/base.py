@@ -91,10 +91,20 @@ def post_json(
     headers: dict[str, str],
     payload: dict[str, Any],
     provider_name: str,
+    connect_hint: str | None = None,
 ) -> dict[str, Any]:
-    """POST *payload* as JSON and return the decoded object, mapping failures to ProviderError."""
+    """POST *payload* as JSON and return the decoded object, mapping failures to ProviderError.
+
+    A connection failure (server unreachable) is reported with *connect_hint* appended,
+    so the caller can offer an actionable next step.
+    """
     try:
         response = client.post(url, headers=headers, json=payload)
+    except httpx.ConnectError as exc:
+        message = f"{provider_name}: could not connect to {url}"
+        if connect_hint:
+            message += f". {connect_hint}"
+        raise ProviderError(message) from exc
     except httpx.HTTPError as exc:
         raise ProviderError(f"{provider_name}: request to {url} failed: {exc}") from exc
 

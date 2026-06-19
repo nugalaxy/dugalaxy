@@ -10,24 +10,36 @@ output it writes to disk.
 pip install dugalaxy
 ```
 
-## Your first run (no setup)
+## Your first run (zero setup)
 
-The package ships an example template called `customer-support`, so you can generate
-immediately:
+The package ships a fully **deterministic** example called `quickstart`, so you can generate
+real data the instant you install — no model, no API key, no config:
+
+```bash
+dugalaxy gen quickstart
+```
+
+It writes synthetic user profiles to `./output/quickstart/`. Because every field is produced
+by the seeded engine (nothing is model-written), there's nothing else to install.
+
+## Adding model-written prose
+
+When you want conversational data — like the bundled `customer-support` example, whose agent
+reply is written by a model — you need a model:
 
 ```bash
 dugalaxy gen customer-support --n 5 --seed 42
 ```
 
 By default this runs against a **local [Ollama](https://ollama.com)** model — free and fully
-offline. You need Ollama installed and running, with a model pulled:
+offline. Install Ollama, then pull a model:
 
 ```bash
 ollama pull llama3.2
 ```
 
-If a template has no model-written prose (all content is deterministic), it needs no model and
-no key at all.
+If Ollama isn't running, Dugalaxy tells you exactly how to proceed (start it, pick another
+provider, or fall back to `dugalaxy gen quickstart`).
 
 ## The loop: template → gen → output
 
