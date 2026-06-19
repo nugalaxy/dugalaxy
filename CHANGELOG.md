@@ -74,7 +74,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pipeline, and prints the run summary. Flags include `--n`, `--seed`, `--model`,
   `--provider`, `--format`, `--cost-cap`, `--include-meta`, `--no-cache`, `--yes`.
 
+### Changed
+- Flagship example is now **`customer-support`** (a relatable, non-domain-specific
+  conversation template), shipped **inside the package** at
+  `dugalaxy/templates/customer-support.yaml`. It is bundled in the wheel, so
+  `pip install dugalaxy && dugalaxy gen customer-support` works with no repo clone.
+- Template resolution (`cli/main.py`) now falls back to the bundled example templates
+  after checking the working directory, so installed users can run the examples by name.
+  Your own `./templates/<name>.yaml` still takes precedence.
+- Onboarding: the pre-run plan now prints the **output location and formats** before a
+  run; `dugalaxy init` explains the Ollama prerequisite, the provider override, and where
+  output lands; `docs/getting-started.md` documents the full template → gen → output loop
+  with a troubleshooting section.
+- Packaging metadata: added the author email and Python 3.10/3.11/3.12 classifiers.
+
 ### Fixed
+- Unknown-price runs (`cli/main.py`): the confirmation prompt now states **"cost unknown
+  for this model — you may be billed"** instead of a generic prompt, so the trust-fatal
+  unknown-cost case is explicit. The run still blocks on confirmation as before.
 - YAML envelope (`emit/yaml.py`): multi-line content (JSON-bearing turns,
   multi-paragraph prose) now renders as block literals (`|`) instead of
   double-quoted scalars with `\n` escapes, so embedded JSON reads cleanly in the

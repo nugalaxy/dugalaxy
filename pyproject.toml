@@ -9,13 +9,16 @@ description = "Author a data template once, generate endless realistic, consiste
 readme = "README.md"
 requires-python = ">=3.10"
 license = "AGPL-3.0-only"
-authors = [{ name = "Sara" }]
+authors = [{ name = "Sara", email = "info@nugalaxy.ai" }]
 keywords = ["synthetic-data", "test-data", "llm-eval", "fine-tuning", "data-generation"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: GNU Affero General Public License v3",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Software Development :: Testing",
 ]
 
