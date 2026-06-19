@@ -30,7 +30,7 @@ scenario:
 
     issue:
       type: weighted_choice            # pick one, with weights (some issues are commoner)
-      values: { login: 0.5, billing: 0.3, crash: 0.2 }
+      values: { login: 0.5, billing: 0.3, crashes: 0.2 }
 
     ticket_number:
       type: range                      # integer, inclusive on both ends
@@ -45,39 +45,41 @@ scenario:
       type: computed                   # build a string from other variables
       value: "TICKET-{{ scenario.ticket_number }}"
 
-    payload:
+    ticket:
       type: object                     # a structured map — serialized to VALID JSON for you
       value:                           # (never paste values into a JSON string yourself)
         ticket_id: "{{ scenario.ticket_id }}"
+        customer: "{{ scenario.customer }}"
         product: "{{ scenario.product }}"
         category: "{{ scenario.issue }}"
 
 output:
   type: conversation
+  # The structured record is the agent's ground truth — the ticket it would see in
+  # the support tool. The customer never sends JSON; they just talk (the turn below).
   system_prompt: |
-    You are a friendly support agent for {{ scenario.product }}.
-    Be concise and helpful. Ground truth (do not contradict):
-      ticket:  {{ scenario.ticket_id }}
-      product: {{ scenario.product }}
-      issue:   {{ scenario.issue }}
+    You are a friendly, concise support agent for {{ scenario.product }}.
+    Use the ticket record below as ground truth; do not contradict it. Greet the
+    customer by name and cite the ticket id.
+    Ticket record:
+    ```json
+    {{ scenario.ticket | json(indent=2) }}
+    ```
   turns:
     - role: user
       content:
         type: fixed                    # the engine fills this; the model never writes it
         value: |
-          Hi, I'm {{ scenario.customer }} with a {{ scenario.issue }} issue on
-          {{ scenario.product }}. Here is my ticket:
-          ```json
-          {{ scenario.payload | json(indent=2) }}
-          ```
-          Can you help?
+          Hi, I'm {{ scenario.customer }}. I'm using {{ scenario.product }} and I'm
+          having trouble with {{ scenario.issue }}. Could you help me out? Thanks!
 
     - role: agent                      # 'agent' (not 'assistant') — matches common seeders
       content:
-        type: generated                # the MODEL writes this, grounded by the facts above
+        type: generated                # the MODEL writes this, grounded by the record above
         instruction: |
-          Acknowledge ticket {{ scenario.ticket_id }} and help with the
-          {{ scenario.issue }} issue on {{ scenario.product }}. Keep it under 6 sentences.
+          Acknowledge ticket {{ scenario.ticket_id }} by name and help {{ scenario.customer }}
+          with their {{ scenario.issue }} issue on {{ scenario.product }}. Keep it under
+          6 sentences.
         max_tokens: 400
         validation:                    # structural checks only — never semantic
           min_length: 40

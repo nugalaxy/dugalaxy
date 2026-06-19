@@ -102,6 +102,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Packaging metadata: added the author email and Python 3.10/3.11/3.12 classifiers.
 
 ### Fixed
+- The `dugalaxy init` starter template now matches the realistic conversation shape: the
+  customer speaks in natural prose and the structured ticket record grounds the agent in the
+  system prompt (previously the customer "pasted" a JSON blob, inherited from an earlier design).
 - When a model is required but Ollama isn't reachable, the connection failure now reports an
   actionable message (start Ollama, pick another provider, or run `dugalaxy gen quickstart`)
   instead of a raw transport error.
