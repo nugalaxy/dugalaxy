@@ -5,6 +5,12 @@ description) followed by a ``conversations:`` (or ``documents:``) list. Written
 incrementally — the header once, then each item appended — so nothing accumulates
 in memory. Each item is serialized with ``yaml.dump`` (then indented under the list
 key), so quotes, backslashes, and newlines in content stay valid YAML.
+
+Multi-line strings (our JSON-bearing turns, multi-paragraph prose) render as block
+literals (``|``) rather than double-quoted scalars with ``\\n`` escapes, so embedded
+JSON shows up cleanly indented. That preference lives on a local ``SafeDumper``
+subclass — never registered on PyYAML's shared Dumper — so it cannot leak into other
+code that serializes YAML.
 """
 
 import textwrap
@@ -17,6 +23,29 @@ import yaml
 from .record import Sample
 
 _VERSION = "1.0"
+
+
+class _BlockDumper(yaml.SafeDumper):
+    """SafeDumper that prefers block literals for multi-line strings.
+
+    A subclass (not a global representer) so the block-style preference stays
+    scoped to this emitter and never mutates PyYAML's shared Dumper state.
+    """
+
+
+def _represent_str(dumper: _BlockDumper, data: str) -> yaml.ScalarNode:
+    """Render strings containing a newline as ``|`` block scalars.
+
+    For everything else, pass ``style=None`` and let PyYAML pick its usual style.
+    PyYAML also falls back to a quoted style on its own when a string cannot be a
+    valid block scalar (e.g. trailing whitespace) — that graceful degradation to
+    valid YAML is fine and intentionally not fought.
+    """
+    style = "|" if "\n" in data else None
+    return dumper.represent_scalar("tag:yaml.org,2002:str", data, style=style)
+
+
+_BlockDumper.add_representer(str, _represent_str)
 
 
 class YamlEmitter:
@@ -48,6 +77,7 @@ class YamlEmitter:
                 "dataset_name": self._dataset_name,
                 "description": self._description,
             },
+            Dumper=_BlockDumper,
             sort_keys=False,
             allow_unicode=True,
         )
@@ -61,7 +91,12 @@ class YamlEmitter:
             self._handle.write(f"{self._list_key}:\n")
         item = _item_for(sample, include_meta=self._include_meta)
         block = yaml.dump(
-            [item], sort_keys=False, allow_unicode=True, default_flow_style=False, width=1000
+            [item],
+            Dumper=_BlockDumper,
+            sort_keys=False,
+            allow_unicode=True,
+            default_flow_style=False,
+            width=1000,
         )
         self._handle.write(textwrap.indent(block, "  "))
         self._handle.flush()

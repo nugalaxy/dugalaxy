@@ -92,6 +92,58 @@ def test_yaml_envelope_is_valid_and_ingestible(tmp_path: Path) -> None:
     assert NASTY in conv["turns"][0]["content"]
 
 
+def test_yaml_multiline_content_uses_block_literals(tmp_path: Path) -> None:
+    """Multi-line turns render as block scalars (|) on the real streamed+indented file.
+
+    The risk lives in the hand-indentation: each dumped item is re-indented under the
+    list key with textwrap.indent, and block scalars are indentation-sensitive. So the
+    proof has to be the final emitted file, not yaml.dump in isolation.
+    """
+    user_content = (
+        "Hi, I'm Emily with a login issue. Here is my ticket:\n"
+        "```json\n"
+        "{\n"
+        '  "ticket_id": "TICKET-8739",\n'
+        '  "product": "Nimbus CLI"\n'
+        "}\n"
+        "```\n"
+        "Can you help?"
+    )
+    agent_content = "First paragraph of the reply.\n\nSecond paragraph after a blank line."
+
+    samples = [
+        Sample(
+            index=i,
+            session_id=f"demo_{i:02d}",
+            kind="conversation",
+            turns=(("user", user_content), ("agent", agent_content)),
+            document=None,
+            facts={},
+            seed=7,
+        )
+        for i in range(2)
+    ]
+
+    path = tmp_path / "blocks.yaml"
+    with YamlEmitter(path, dataset_name="d", description="", kind="conversation") as emitter:
+        for sample in samples:
+            emitter.emit(sample)
+
+    raw = path.read_text(encoding="utf-8")
+    # (a) multi-line content is rendered as block literals: real newlines, no \n escapes.
+    assert "content: |" in raw
+    assert "\\n" not in raw
+    assert '"ticket_id": "TICKET-8739"' in raw  # embedded JSON shows up unescaped
+
+    # (b) the whole file round-trips byte-for-byte across multiple appended items.
+    loaded = yaml.safe_load(raw)
+    assert len(loaded["conversations"]) == 2
+    for conv in loaded["conversations"]:
+        assert [t["role"] for t in conv["turns"]] == ["user", "agent"]
+        assert conv["turns"][0]["content"] == user_content
+        assert conv["turns"][1]["content"] == agent_content
+
+
 def test_yaml_empty_run_is_valid_empty_list(tmp_path: Path) -> None:
     path = tmp_path / "empty.yaml"
     with YamlEmitter(path, dataset_name="d", description="", kind="conversation"):

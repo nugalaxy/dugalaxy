@@ -74,6 +74,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pipeline, and prints the run summary. Flags include `--n`, `--seed`, `--model`,
   `--provider`, `--format`, `--cost-cap`, `--include-meta`, `--no-cache`, `--yes`.
 
+### Fixed
+- YAML envelope (`emit/yaml.py`): multi-line content (JSON-bearing turns,
+  multi-paragraph prose) now renders as block literals (`|`) instead of
+  double-quoted scalars with `\n` escapes, so embedded JSON reads cleanly in the
+  emitted file. Implemented with a local `SafeDumper` subclass — no global
+  representer — preserving the streamed, disk-backed contract; the round-trip is
+  verified on the real indented file, where the block-scalar indentation risk lives.
+
 <!--
 RELEASE PROCESS (how "release notes" work on GitHub):
 1. Move items from [Unreleased] into a new dated, versioned section below.
