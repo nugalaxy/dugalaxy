@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" role="img" aria-label="Dugalaxy">
+  <defs>
+    <radialGradient id="space" cx="50%" cy="50%" r="62%">
+      <stop offset="0%" stop-color="#3b1d6e"/>
+      <stop offset="100%" stop-color="#140a2b"/>
+    </radialGradient>
+    <radialGradient id="core" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fff7ff"/>
+      <stop offset="38%" stop-color="#ffd6f5"/>
+      <stop offset="100%" stop-color="#c026d3" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- deep space -->
+  <circle cx="100" cy="100" r="96" fill="url(#space)"/>
+
+  <!-- spiral arms -->
+  <g fill="none" stroke-linecap="round" opacity="0.92">
+    <path d="M100 100 C 132 68, 152 112, 120 146 C 92 176, 52 148, 54 108" stroke="#e879f9" stroke-width="7"/>
+    <path d="M100 100 C 68 132, 48 88, 80 54 C 108 24, 148 52, 146 92" stroke="#a78bfa" stroke-width="7"/>
+  </g>
+
+  <!-- glowing core -->
+  <circle cx="100" cy="100" r="46" fill="url(#core)"/>
+  <circle cx="100" cy="100" r="12" fill="#fff7ff"/>
+
+  <!-- scattered stars -->
+  <g fill="#fde2ff">
+    <circle cx="48" cy="60" r="2.2"/>
+    <circle cx="158" cy="72" r="1.8"/>
+    <circle cx="150" cy="150" r="2.4"/>
+    <circle cx="60" cy="156" r="1.6"/>
+    <circle cx="40" cy="112" r="1.5"/>
+    <circle cx="168" cy="118" r="1.4"/>
+  </g>
+</svg>

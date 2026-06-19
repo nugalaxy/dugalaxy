@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/m2sarah2/dugalaxy/main/assets/logo.svg" alt="Dugalaxy" width="140" height="140">
+</p>
+
 # Dugalaxy
 
 **Author a data template once — generate endless varied, consistent, realistic test data forever. No re-prompting.**

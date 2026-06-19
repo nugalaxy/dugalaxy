@@ -58,6 +58,30 @@ def test_version() -> None:
     assert "dugalaxy" in result.stdout
 
 
+# ── welcome + list + interactive selection ─────────────────────────────────────
+
+
+def test_welcome_shown_with_no_command() -> None:
+    result = runner.invoke(app, [])
+    assert result.exit_code == 0
+    assert "Dugalaxy" in result.stdout
+    assert "Get started" in result.stdout
+
+
+def test_list_includes_bundled_customer_support() -> None:
+    result = runner.invoke(app, ["list"])
+    assert result.exit_code == 0
+    assert "customer-support" in result.stdout
+
+
+def test_gen_without_template_non_interactive_errors() -> None:
+    # Under the test runner stdin is not a tty, so gen must error with guidance
+    # rather than hang waiting for an interactive choice.
+    result = runner.invoke(app, ["gen"])
+    assert result.exit_code == 1
+    assert "No template" in result.stderr
+
+
 # ── init ──────────────────────────────────────────────────────────────────────
 
 

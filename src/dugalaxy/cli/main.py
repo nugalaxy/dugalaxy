@@ -5,12 +5,15 @@ is the marketing: it should make the magic moment — one command, endless varie
 grounded samples — obvious and fast.
 """
 
+import sys
 from importlib.resources import files
 from pathlib import Path
 from typing import Annotated
 
 import typer
 from rich.console import Console
+from rich.panel import Panel
+from rich.prompt import IntPrompt
 
 from dugalaxy.config.loader import load_config
 from dugalaxy.config.schema import Config
@@ -28,6 +31,7 @@ from dugalaxy.generator.interpolation import to_json
 from dugalaxy.providers import build_provider
 from dugalaxy.reporting.summary import duplicate_warning
 from dugalaxy.scenario import generate_scenario
+from dugalaxy.template.discovery import discover_templates
 from dugalaxy.template.errors import DugalaxyError
 from dugalaxy.template.loader import load_template
 from dugalaxy.template.spec import TemplateSpec
@@ -36,7 +40,7 @@ from .starter import STARTER_TEMPLATE
 
 app = typer.Typer(
     help="Author a data template once, generate endless realistic samples forever.",
-    no_args_is_help=True,
+    no_args_is_help=False,
 )
 console = Console()
 err_console = Console(stderr=True)
@@ -45,9 +49,48 @@ err_console = Console(stderr=True)
 _DEFAULT_OUTPUT_TOKENS = 512
 
 
-@app.callback()
-def _main() -> None:
-    """Dugalaxy command-line interface."""
+@app.callback(invoke_without_command=True)
+def _main(ctx: typer.Context) -> None:
+    """Author a data template once, generate endless realistic samples forever."""
+    if ctx.invoked_subcommand is None:
+        _print_welcome()
+
+
+def _galaxy_mark() -> str:
+    """The galaxy emoji where the terminal can render it, else an ASCII fallback.
+
+    Legacy Windows consoles use a codepage (e.g. cp1252) that cannot encode the
+    emoji and would raise on print — so degrade instead of crashing the welcome.
+    """
+    try:
+        "🌌".encode(sys.stdout.encoding or "utf-8")
+        return "🌌"
+    except (LookupError, UnicodeEncodeError):
+        return "*"
+
+
+def _print_welcome() -> None:
+    """Print a friendly branded welcome with the obvious next steps."""
+    from dugalaxy import __version__
+
+    body = (
+        "[dim]Author a data template once, then generate endless varied, grounded\n"
+        "samples. No re-prompting.[/dim]\n\n"
+        "[bold]Get started[/bold]\n"
+        "  [cyan]dugalaxy gen customer-support[/cyan]   run the bundled example\n"
+        "  [cyan]dugalaxy init[/cyan]                   scaffold your own template\n"
+        "  [cyan]dugalaxy list[/cyan]                   see available templates\n\n"
+        "[dim]Docs: https://github.com/m2sarah2/dugalaxy[/dim]"
+    )
+    console.print(
+        Panel(
+            body,
+            title=f"{_galaxy_mark()}  Dugalaxy  v{__version__}",
+            title_align="left",
+            border_style="magenta",
+            padding=(1, 2),
+        )
+    )
 
 
 @app.command()
@@ -56,6 +99,22 @@ def version() -> None:
     from dugalaxy import __version__
 
     typer.echo(f"dugalaxy {__version__}")
+
+
+@app.command(name="list")
+def list_templates() -> None:
+    """List the templates Dugalaxy can find — bundled examples and your own."""
+    infos = discover_templates()
+    if not infos:
+        console.print("No templates found. Run [cyan]dugalaxy init[/cyan] to scaffold one.")
+        return
+    console.print("[bold]Available templates[/bold]")
+    for info in infos:
+        console.print(
+            f"  [cyan]{info.name}[/cyan]  [dim]({info.source})[/dim]"
+            + (f" — {info.description}" if info.description else "")
+        )
+    console.print("\nRun one with: [cyan]dugalaxy gen <name>[/cyan]")
 
 
 @app.command()
@@ -85,8 +144,9 @@ def init(
 @app.command()
 def gen(
     template: Annotated[
-        str, typer.Argument(help="Template name (in ./templates or bundled) or a path.")
-    ],
+        str | None,
+        typer.Argument(help="Template name (in ./templates or bundled) or a path."),
+    ] = None,
     n: Annotated[int | None, typer.Option("--n", help="Number of samples.")] = None,
     seed: Annotated[int | None, typer.Option("--seed", help="Run seed.")] = None,
     max_retries: Annotated[
@@ -124,6 +184,8 @@ def gen(
 ) -> None:
     """Generate a dataset from a template — the magic moment."""
     try:
+        if template is None:
+            template = _choose_template()
         spec = load_template(_resolve_template_path(template))
         config = load_config(
             _resolve_config_path(config_path),
@@ -188,6 +250,25 @@ def gen(
 
 
 # ──────────────────────────── helpers ────────────────────────────
+
+
+def _choose_template() -> str:
+    """Interactively pick a template when ``gen`` is run with no argument."""
+    infos = discover_templates()
+    if not infos:
+        raise DugalaxyError(
+            "No templates found. Run `dugalaxy init` to scaffold one, or pass a path."
+        )
+    if not sys.stdin.isatty():
+        raise DugalaxyError("No template given. Pass a name or path (see `dugalaxy list`).")
+
+    console.print("[bold]Which template?[/bold]")
+    for i, info in enumerate(infos, 1):
+        console.print(f"  [bold]{i}[/bold]. [cyan]{info.name}[/cyan] [dim]({info.source})[/dim]")
+    choice = IntPrompt.ask("Number", default=1)
+    if not 1 <= choice <= len(infos):
+        raise DugalaxyError(f"Pick a number between 1 and {len(infos)}.")
+    return str(infos[choice - 1].path)
 
 
 def _resolve_template_path(name: str) -> Path:
