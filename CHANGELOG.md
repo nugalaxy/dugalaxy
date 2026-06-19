@@ -75,6 +75,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `--provider`, `--format`, `--cost-cap`, `--include-meta`, `--no-cache`, `--yes`.
 
 ### Added
+- The pre-run plan now prints the **resolved template path** (`template: <file>`), so the exact
+  file that ran is always visible — closing the silent-precedence surprise when a local template
+  shadows a bundled one of the same name.
 - **Zero-setup first run:** a bundled, fully deterministic `quickstart` template
   (`dugalaxy gen quickstart`) produces synthetic profiles with no model, no API key, and
   no config — it runs instantly straight after `pip install`. Onboarding (welcome banner,
@@ -100,6 +103,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   output lands; `docs/getting-started.md` documents the full template → gen → output loop
   with a troubleshooting section.
 - Packaging metadata: added the author email and Python 3.10/3.11/3.12 classifiers.
+- The public surface is now domain-neutral: removed residual security/SOC-flavored language
+  from `SECURITY.md`, code comments, and test fixtures (the templates were already neutral).
 
 ### Fixed
 - The `dugalaxy init` starter template now matches the realistic conversation shape: the

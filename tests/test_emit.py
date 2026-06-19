@@ -15,9 +15,9 @@ def _conversation(index: int) -> Sample:
         index=index,
         session_id=f"demo_{index:02d}",
         kind="conversation",
-        turns=(("user", f"alert {NASTY}"), ("agent", "analysis here")),
+        turns=(("user", f"hello {NASTY}"), ("agent", "reply here")),
         document=None,
-        facts={"proc": "powershell.exe", "n": index},
+        facts={"product": "Nimbus CLI", "n": index},
         seed=42,
     )
 
@@ -65,7 +65,7 @@ def test_jsonl_include_meta(tmp_path: Path) -> None:
     record = json.loads(path.read_text(encoding="utf-8").strip())
     assert record["_meta"]["index"] == 3
     assert record["_meta"]["seed"] == 42
-    assert record["_meta"]["facts"]["proc"] == "powershell.exe"
+    assert record["_meta"]["facts"]["product"] == "Nimbus CLI"
 
 
 # ── YAML envelope ─────────────────────────────────────────────────────────────

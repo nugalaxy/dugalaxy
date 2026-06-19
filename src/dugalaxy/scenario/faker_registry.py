@@ -92,7 +92,7 @@ FAKER_PROVIDERS: dict[str, FakerProvider] = {
     "uuid4": _uuid4,
     "domain_name": _domain_name,
     "mac_address": _mac_address,
-    # Security-oriented kinds for SOC/EDR-style telemetry.
+    # Infrastructure kinds (hashes, paths, hostnames) for technical datasets.
     "sha256": _sha256,
     "file_path": _file_path,
     "hostname": _hostname,

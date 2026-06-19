@@ -82,30 +82,30 @@ def test_categorical_variable_names() -> None:
 def test_diversity_ignores_high_cardinality_variables() -> None:
     """The headline fix: timestamps/UUIDs must NOT inflate diversity.
 
-    Here the only categorical axis ('proc') never varies, so the run is genuinely
+    Here the only categorical axis ('product') never varies, so the run is genuinely
     low-diversity even though every sample has a unique timestamp/index.
     """
-    tracker = DiversityTracker(categorical={"proc"})
+    tracker = DiversityTracker(categorical={"product"})
     for i in range(5):
-        tracker.record({"proc": "powershell.exe", "idx": i, "ts": f"2024-01-0{i}T00:00:00Z"})
+        tracker.record({"product": "Nimbus CLI", "idx": i, "ts": f"2024-01-0{i}T00:00:00Z"})
     summary = tracker.summary(requested=5, dropped=0, total_retries=0)
     assert summary.unique_scenarios == 1
     assert summary.diversity_ratio == 0.2  # 1 unique categorical combo / 5 produced
     # the high-cardinality variables still show up in the per-variable spread
-    assert summary.per_variable_spread == {"proc": 1, "idx": 5, "ts": 5}
+    assert summary.per_variable_spread == {"product": 1, "idx": 5, "ts": 5}
 
 
 def test_diversity_counts_categorical_combinations() -> None:
-    tracker = DiversityTracker(categorical={"proc", "verdict"})
+    tracker = DiversityTracker(categorical={"product", "plan"})
     rows = [
-        {"proc": "a", "verdict": "tp", "ts": "t0"},
-        {"proc": "a", "verdict": "tp", "ts": "t1"},  # same categorical combo as row 0
-        {"proc": "b", "verdict": "fp", "ts": "t2"},
+        {"product": "a", "plan": "x", "ts": "t0"},
+        {"product": "a", "plan": "x", "ts": "t1"},  # same categorical combo as row 0
+        {"product": "b", "plan": "y", "ts": "t2"},
     ]
     for row in rows:
         tracker.record(row)
     summary = tracker.summary(requested=3, dropped=0, total_retries=0)
-    assert summary.unique_scenarios == 2  # {a,tp} and {b,fp}
+    assert summary.unique_scenarios == 2  # {a,x} and {b,y}
 
 
 def test_diversity_falls_back_to_all_vars_without_categoricals() -> None:
@@ -119,14 +119,14 @@ def test_diversity_falls_back_to_all_vars_without_categoricals() -> None:
 
 
 def test_diversity_all_unique() -> None:
-    tracker = DiversityTracker(categorical={"proc", "idx"})
+    tracker = DiversityTracker(categorical={"product", "idx"})
     for i in range(5):
-        tracker.record({"proc": "powershell.exe", "idx": i})
+        tracker.record({"product": "Nimbus CLI", "idx": i})
     summary = tracker.summary(requested=5, dropped=0, total_retries=0)
     assert summary.produced == 5
     assert summary.unique_scenarios == 5
     assert summary.diversity_ratio == 1.0
-    assert summary.per_variable_spread == {"proc": 1, "idx": 5}
+    assert summary.per_variable_spread == {"product": 1, "idx": 5}
 
 
 def test_diversity_with_repeats() -> None:

@@ -207,7 +207,8 @@ def gen(
     try:
         if template is None:
             template = _choose_template()
-        spec = load_template(_resolve_template_path(template))
+        resolved = _resolve_template_path(template)
+        spec = load_template(resolved)
         config = load_config(
             _resolve_config_path(config_path),
             overrides={
@@ -237,6 +238,7 @@ def gen(
             needs_model=needs_model,
             out_dir=out_dir,
             formats=formats,
+            template_path=resolved,
         )
         estimate = _estimate_cost(spec, config, n=n_eff, seed=seed_eff, needs_model=needs_model)
         _print_estimate(estimate)
@@ -386,8 +388,10 @@ def _print_plan(
     needs_model: bool,
     out_dir: Path,
     formats: list[str],
+    template_path: Path,
 ) -> None:
     console.print(f"[bold]{spec.meta.name}[/bold] — {spec.meta.description}")
+    console.print(f"  template: {template_path}")
     target = (
         "deterministic (no model)" if not needs_model else f"{config.provider} / {config.model}"
     )

@@ -18,7 +18,7 @@ def _request(**kwargs: object) -> GeneratedRequest:
 
 
 def test_passes_clean_text() -> None:
-    result = validate_generated("A perfectly fine analysis.", _request())
+    result = validate_generated("A perfectly fine reply.", _request())
     assert result.ok
     assert result.reason is None
 
@@ -40,16 +40,14 @@ def test_max_length_enforced() -> None:
 
 
 def test_must_mention_present_passes() -> None:
-    result = validate_generated(
-        "The parent was winword.exe.", _request(must_mention=("winword.exe",))
-    )
+    result = validate_generated("Your ticket is TICKET-42.", _request(must_mention=("TICKET-42",)))
     assert result.ok
 
 
 def test_must_mention_absent_fails() -> None:
-    result = validate_generated("No process named here.", _request(must_mention=("winword.exe",)))
+    result = validate_generated("No ticket id here.", _request(must_mention=("TICKET-42",)))
     assert not result.ok
-    assert "winword.exe" in (result.reason or "")
+    assert "TICKET-42" in (result.reason or "")
 
 
 def test_must_not_contain_blocks_banned_text() -> None:
@@ -61,9 +59,9 @@ def test_must_not_contain_blocks_banned_text() -> None:
 
 
 def test_combined_checks_pass() -> None:
-    text = "The winword.exe parent spawning powershell.exe is a strong red flag; escalate."
+    text = "Your order ORD-1 is confirmed and invoice INV-9 is attached; thanks!"
     result = validate_generated(
         text,
-        _request(min_length=20, max_length=200, must_mention=("winword.exe", "powershell.exe")),
+        _request(min_length=20, max_length=200, must_mention=("ORD-1", "INV-9")),
     )
     assert result.ok

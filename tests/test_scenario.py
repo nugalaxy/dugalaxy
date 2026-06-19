@@ -169,13 +169,13 @@ def test_datetime_anchor_overridable() -> None:
 def test_computed_interpolates_siblings() -> None:
     spec = _scenario(
         {
-            "dept": {"type": "choice", "values": ["finance"]},
+            "team": {"type": "choice", "values": ["support"]},
             "idx": {"type": "range", "min": 7, "max": 7},
-            "user": {"type": "computed", "value": "{{ scenario.dept }}_user{{ scenario.idx }}"},
+            "user": {"type": "computed", "value": "{{ scenario.team }}_user{{ scenario.idx }}"},
         }
     )
     facts = generate_scenario(spec, seed=3, index=0)
-    assert facts["user"] == "finance_user7"
+    assert facts["user"] == "support_user7"
 
 
 def test_object_renders_to_dict_with_interpolated_leaves() -> None:

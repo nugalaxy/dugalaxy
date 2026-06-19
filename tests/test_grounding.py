@@ -78,11 +78,11 @@ def test_generated_block_grounds_instruction_and_validation() -> None:
                     "role": "agent",
                     "content": {
                         "type": "generated",
-                        "instruction": "Discuss {{ scenario.proc }}.",
+                        "instruction": "Discuss {{ scenario.product }}.",
                         "max_tokens": 200,
                         "validation": {
                             "min_length": 50,
-                            "must_mention": ["{{ scenario.proc }}"],
+                            "must_mention": ["{{ scenario.product }}"],
                             "must_not_contain": ["As an AI"],
                         },
                     },
@@ -90,15 +90,15 @@ def test_generated_block_grounds_instruction_and_validation() -> None:
             ],
         }
     )
-    grounded = ground_output(output, {"proc": "powershell.exe"})
+    grounded = ground_output(output, {"product": "Nimbus CLI"})
     block = grounded.blocks[0]
     assert block.value is None
     request = block.request
     assert isinstance(request, GeneratedRequest)
-    assert request.instruction == "Discuss powershell.exe."
+    assert request.instruction == "Discuss Nimbus CLI."
     assert request.max_tokens == 200
     assert request.min_length == 50
-    assert request.must_mention == ("powershell.exe",)  # reference resolved to the fact
+    assert request.must_mention == ("Nimbus CLI",)  # reference resolved to the fact
     assert request.must_not_contain == ("As an AI",)
 
 

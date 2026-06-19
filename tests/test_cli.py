@@ -116,6 +116,8 @@ def test_gen_deterministic_only(tmp_path: Path) -> None:
 
     assert result.exit_code == 0, result.stdout
     assert "produced 4/4" in result.stdout
+    # the plan shows exactly which file ran (closes the silent-precedence surprise)
+    assert "template:" in result.stdout
     lines = (out / "det.jsonl").read_text(encoding="utf-8").splitlines()
     assert len(lines) == 4
     assert all(json.loads(line)["event"] == "login" for line in lines)

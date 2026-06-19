@@ -8,8 +8,9 @@
 dugalaxy.config.yaml
 # local test template — not for the repo
 dawn-test.yaml
-# private dogfooding template (Echo) — kept local, never public
-templates/security-incident-triage.yaml
+# local template workspace — your own templates live here, never committed
+# (shipped examples live inside the package, at src/dugalaxy/templates/)
+templates/
 *.key
 *.pem
 secrets/
@@ -27,8 +28,6 @@ _internal/
 # ─────────────────────────────────────────────────────────────
 output/
 *.jsonl
-# (keep any sample fixtures shipped intentionally)
-!templates/**/*.jsonl
 .dugalaxy_cache/
 .dugalaxy_index/
 

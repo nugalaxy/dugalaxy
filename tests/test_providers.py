@@ -19,8 +19,8 @@ from dugalaxy.providers import (
 )
 
 REQUEST = CompletionRequest(
-    system="You are a SOC analyst.",
-    messages=(Message(role="user", content="Triage this alert."),),
+    system="You are a helpful support agent.",
+    messages=(Message(role="user", content="Can you help with my order?"),),
     max_tokens=200,
 )
 
@@ -42,7 +42,7 @@ def test_openai_compatible_builds_request_and_parses_response() -> None:
         return httpx.Response(
             200,
             json={
-                "choices": [{"message": {"content": "Looks malicious."}}],
+                "choices": [{"message": {"content": "Glad to help!"}}],
                 "usage": {"prompt_tokens": 12, "completion_tokens": 5},
             },
         )
@@ -55,7 +55,7 @@ def test_openai_compatible_builds_request_and_parses_response() -> None:
     )
     result = provider.complete(REQUEST)
 
-    assert result.text == "Looks malicious."
+    assert result.text == "Glad to help!"
     assert result.usage.input_tokens == 12
     assert result.usage.output_tokens == 5
     assert captured["url"].endswith("/chat/completions")
@@ -63,7 +63,7 @@ def test_openai_compatible_builds_request_and_parses_response() -> None:
     assert captured["body"]["model"] == "gpt-4o-mini"
     assert captured["body"]["messages"][0] == {
         "role": "system",
-        "content": "You are a SOC analyst.",
+        "content": "You are a helpful support agent.",
     }
     assert captured["body"]["max_tokens"] == 200
 
@@ -104,7 +104,7 @@ def test_anthropic_uses_top_level_system_and_parses_content() -> None:
         return httpx.Response(
             200,
             json={
-                "content": [{"type": "text", "text": "Escalate to tier 2."}],
+                "content": [{"type": "text", "text": "Happy to help with that."}],
                 "usage": {"input_tokens": 30, "output_tokens": 8},
             },
         )
@@ -117,13 +117,13 @@ def test_anthropic_uses_top_level_system_and_parses_content() -> None:
     )
     result = provider.complete(REQUEST)
 
-    assert result.text == "Escalate to tier 2."
+    assert result.text == "Happy to help with that."
     assert result.usage.input_tokens == 30
     assert result.usage.output_tokens == 8
     assert captured["url"].endswith("/v1/messages")
     assert captured["key"] == "sk-ant"
     assert captured["version"]
-    assert captured["body"]["system"] == "You are a SOC analyst."
+    assert captured["body"]["system"] == "You are a helpful support agent."
     assert captured["body"]["max_tokens"] == 200
 
 
@@ -155,7 +155,7 @@ def test_ollama_no_auth_and_parses_message() -> None:
         return httpx.Response(
             200,
             json={
-                "message": {"role": "assistant", "content": "Benign."},
+                "message": {"role": "assistant", "content": "All set!"},
                 "prompt_eval_count": 40,
                 "eval_count": 3,
             },
@@ -166,7 +166,7 @@ def test_ollama_no_auth_and_parses_message() -> None:
     )
     result = provider.complete(REQUEST)
 
-    assert result.text == "Benign."
+    assert result.text == "All set!"
     assert result.usage.input_tokens == 40
     assert result.usage.output_tokens == 3
     assert captured["url"].endswith("/api/chat")

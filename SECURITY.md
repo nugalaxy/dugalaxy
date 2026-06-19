@@ -12,8 +12,7 @@ issue before any public disclosure.
 
 ## Scope note
 
-Dugalaxy generates **synthetic, defensive test data**. Example templates may produce
-SOC/detection-engineering content (e.g. EDR alert triage). All such output is obviously
-synthetic and inert. Dugalaxy does not produce, optimize, or deploy operational tooling.
-If you believe a template or output could enable real-world harm, please report it via the
-private channel above.
+Dugalaxy generates **synthetic test data** from templates you write — names, emails, IDs,
+timestamps, and the like. All output is obviously synthetic and inert. Dugalaxy does not
+produce, optimize, or deploy operational tooling. If you believe a template or its output
+could enable real-world harm, please report it via the private channel above.
