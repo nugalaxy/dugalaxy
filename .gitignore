@@ -4,7 +4,10 @@
 .env
 .env.*
 !.env.example
-dugalaxy.config.yaml          # the REAL config (keys/base_url) — example is committed instead
+# the REAL config (keys/base_url) — example is committed instead
+dugalaxy.config.yaml
+# local test template — not for the repo
+dawn-test.yaml
 *.key
 *.pem
 secrets/
@@ -22,7 +25,8 @@ _internal/
 # ─────────────────────────────────────────────────────────────
 output/
 *.jsonl
-!templates/**/*.jsonl         # (keep any sample fixtures shipped intentionally)
+# (keep any sample fixtures shipped intentionally)
+!templates/**/*.jsonl
 .dugalaxy_cache/
 .dugalaxy_index/
 
