@@ -13,7 +13,7 @@ from dugalaxy.providers.base import Completion, CompletionRequest, TextProvider
 from dugalaxy.template.loader import load_template
 from dugalaxy.template.spec import TemplateSpec
 
-FLAGSHIP = Path(__file__).parent.parent / "templates" / "security-incident-triage.yaml"
+FLAGSHIP = Path(__file__).parent.parent / "src" / "dugalaxy" / "templates" / "customer-support.yaml"
 
 
 class FakeProvider(TextProvider):
@@ -75,22 +75,20 @@ def test_flagship_run_produces_valid_echo_yaml(tmp_path: Path) -> None:
     assert result.summary.produced == 3
     assert result.summary.dropped == 0
 
-    envelope = yaml.safe_load(
-        (tmp_path / "security-incident-triage.yaml").read_text(encoding="utf-8")
-    )
+    envelope = yaml.safe_load((tmp_path / "customer-support.yaml").read_text(encoding="utf-8"))
     assert envelope["version"] == "1.0"
-    assert envelope["dataset_name"] == "security-incident-triage"
+    assert envelope["dataset_name"] == "customer-support"
     assert len(envelope["conversations"]) == 3
 
     conv = envelope["conversations"][0]
-    assert conv["session_id"] == "security-incident-triage_00"
+    assert conv["session_id"] == "customer-support_00"
     roles = [turn["role"] for turn in conv["turns"]]
-    assert roles == ["user", "assistant"]
+    assert roles == ["user", "agent"]
 
-    # The user turn embeds the edr_payload as JSON inside prose — it must parse.
+    # The user turn embeds the ticket payload as JSON inside prose — it must parse.
     user_content = conv["turns"][0]["content"]
     embedded = user_content.split("```json\n", 1)[1].split("\n```", 1)[0]
-    assert json.loads(embedded)["event_type"] == "process_creation"
+    assert json.loads(embedded)["ticket_id"].startswith("TICKET-")
 
 
 def test_flagship_run_writes_jsonl_and_index(tmp_path: Path) -> None:
@@ -104,11 +102,9 @@ def test_flagship_run_writes_jsonl_and_index(tmp_path: Path) -> None:
         output_formats=["jsonl", "yaml"],
     )
 
-    jsonl_lines = (
-        (tmp_path / "security-incident-triage.jsonl").read_text(encoding="utf-8").splitlines()
-    )
+    jsonl_lines = (tmp_path / "customer-support.jsonl").read_text(encoding="utf-8").splitlines()
     assert len(jsonl_lines) == 3
-    assert json.loads(jsonl_lines[0])["session_id"] == "security-incident-triage_00"
+    assert json.loads(jsonl_lines[0])["session_id"] == "customer-support_00"
 
     index_lines = (tmp_path / "index.jsonl").read_text(encoding="utf-8").splitlines()
     assert len(index_lines) == 3
@@ -136,8 +132,8 @@ def test_run_is_reproducible(tmp_path: Path) -> None:
         output_dir=out_b,
         output_formats=["jsonl"],
     )
-    assert (out_a / "security-incident-triage.jsonl").read_text() == (
-        out_b / "security-incident-triage.jsonl"
+    assert (out_a / "customer-support.jsonl").read_text() == (
+        out_b / "customer-support.jsonl"
     ).read_text()
 
 
@@ -176,7 +172,7 @@ def test_drops_after_max_retries(tmp_path: Path) -> None:
     )
     assert result.summary.produced == 0
     assert result.summary.dropped == 2
-    assert (tmp_path / "security-incident-triage.jsonl").read_text() == ""
+    assert (tmp_path / "customer-support.jsonl").read_text() == ""
 
 
 # ── deterministic-only (no provider) ──────────────────────────────────────────
@@ -229,8 +225,8 @@ def test_cache_hit_avoids_second_provider_call(tmp_path: Path) -> None:
     )
     assert len(second.calls) == 0  # identical prompts => all cache hits
 
-    assert (tmp_path / "1" / "security-incident-triage.jsonl").read_text() == (
-        tmp_path / "2" / "security-incident-triage.jsonl"
+    assert (tmp_path / "1" / "customer-support.jsonl").read_text() == (
+        tmp_path / "2" / "customer-support.jsonl"
     ).read_text()
 
 

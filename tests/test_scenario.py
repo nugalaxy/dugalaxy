@@ -16,7 +16,7 @@ from dugalaxy.template.errors import (
 from dugalaxy.template.loader import load_template
 from dugalaxy.template.spec import FakerVar, ScenarioSpec
 
-FLAGSHIP = Path(__file__).parent.parent / "templates" / "security-incident-triage.yaml"
+FLAGSHIP = Path(__file__).parent.parent / "src" / "dugalaxy" / "templates" / "customer-support.yaml"
 
 
 def _scenario(variables: dict[str, Any]) -> ScenarioSpec:
@@ -300,17 +300,17 @@ def test_flagship_facts_are_consistent() -> None:
     spec = load_template(FLAGSHIP).scenario
     facts = generate_scenario(spec, seed=42, index=0)
 
-    # username is computed from dept + user_index
-    assert facts["username"] == f"{facts['dept']}_user{facts['user_index']}"
+    # ticket_id is computed from ticket_number
+    assert facts["ticket_id"] == f"TICKET-{facts['ticket_number']}"
 
-    # edr_payload is a serializable dict whose leaves match the scenario facts
-    payload = facts["edr_payload"]
+    # payload is a serializable dict whose leaves match the scenario facts
+    payload = facts["payload"]
     assert isinstance(payload, dict)
-    assert payload["process_name"] == facts["process_name"]
-    assert payload["parent_process"] == facts["parent_process"]
-    assert payload["user"] == facts["username"]
-    assert payload["severity"] == facts["severity"]
-    assert payload["command_line"].startswith(facts["process_name"])
+    assert payload["ticket_id"] == facts["ticket_id"]
+    assert payload["product"] == facts["product"]
+    assert payload["plan"] == facts["plan"]
+    assert payload["category"] == facts["issue"]
+    assert payload["customer"] == facts["customer"]
 
 
 # ── golden values (cross-version reproducibility guard) ───────────────────────
@@ -363,22 +363,21 @@ def test_golden_flagship_facts() -> None:
     spec = load_template(FLAGSHIP).scenario
     facts = generate_scenario(spec, seed=42, index=0)
     assert facts == {
-        "command_flags": "-exec bypass -W Hidden -enc <REDACTED>",
-        "dept": "engineering",
-        "parent_process": "explorer.exe",
-        "process_name": "wscript.exe",
-        "severity": "high",
-        "timestamp": "2024-11-01T05:39:24Z",
-        "user_index": 53,
-        "username": "engineering_user53",
-        "verdict": "needs_investigation",
-        "edr_payload": {
-            "event_type": "process_creation",
-            "process_name": "wscript.exe",
-            "command_line": "wscript.exe -exec bypass -W Hidden -enc <REDACTED>",
-            "parent_process": "explorer.exe",
-            "user": "engineering_user53",
-            "timestamp": "2024-11-01T05:39:24Z",
-            "severity": "high",
+        "customer": "Emily Garcia",
+        "email": "alexanderanderson@example.org",
+        "issue": "login",
+        "opened_at": "2024-12-18T17:31:50Z",
+        "plan": "enterprise",
+        "product": "Nimbus Cloud",
+        "ticket_number": 8739,
+        "ticket_id": "TICKET-8739",
+        "payload": {
+            "ticket_id": "TICKET-8739",
+            "product": "Nimbus Cloud",
+            "plan": "enterprise",
+            "category": "login",
+            "customer": "Emily Garcia",
+            "email": "alexanderanderson@example.org",
+            "opened_at": "2024-12-18T17:31:50Z",
         },
     }

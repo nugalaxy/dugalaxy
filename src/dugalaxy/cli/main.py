@@ -5,6 +5,7 @@ is the marketing: it should make the magic moment — one command, endless varie
 grounded samples — obvious and fast.
 """
 
+from importlib.resources import files
 from pathlib import Path
 from typing import Annotated
 
@@ -73,12 +74,19 @@ def init(
         raise typer.Exit(1)
     path.write_text(STARTER_TEMPLATE.replace("__NAME__", name), encoding="utf-8")
     console.print(f"[green]Created[/green] {path}")
-    console.print(f"Next: [bold]dugalaxy gen {path}[/bold]  (uses local Ollama by default)")
+    console.print(f"Next: [bold]dugalaxy gen {path}[/bold]")
+    console.print(
+        f"  Runs against local Ollama by default (run [bold]ollama pull llama3.2[/bold] first),\n"
+        f"  or pass [bold]--provider/--model[/bold] for a hosted API. "
+        f"Output is written to [bold]./output/{name}/[/bold]."
+    )
 
 
 @app.command()
 def gen(
-    template: Annotated[str, typer.Argument(help="Template name (in ./templates) or a path.")],
+    template: Annotated[
+        str, typer.Argument(help="Template name (in ./templates or bundled) or a path.")
+    ],
     n: Annotated[int | None, typer.Option("--n", help="Number of samples.")] = None,
     seed: Annotated[int | None, typer.Option("--seed", help="Run seed.")] = None,
     max_retries: Annotated[
@@ -138,14 +146,28 @@ def gen(
         needs_model = requires_model(spec.output)
         provider_obj = build_provider(config) if needs_model else None
 
-        _print_plan(spec, config, n=n_eff, seed=seed_eff, needs_model=needs_model)
+        _print_plan(
+            spec,
+            config,
+            n=n_eff,
+            seed=seed_eff,
+            needs_model=needs_model,
+            out_dir=out_dir,
+            formats=formats,
+        )
         estimate = _estimate_cost(spec, config, n=n_eff, seed=seed_eff, needs_model=needs_model)
         _print_estimate(estimate)
         enforce_cap(estimate, config.cost_cap_usd)
 
-        if needs_model and not estimate.free and not yes and not typer.confirm("Proceed?"):
-            console.print("Aborted.")
-            raise typer.Exit(1)
+        if needs_model and not estimate.free and not yes:
+            prompt = (
+                "cost unknown for this model — you may be billed. Proceed?"
+                if not estimate.priced
+                else "Proceed?"
+            )
+            if not typer.confirm(prompt):
+                console.print("Aborted.")
+                raise typer.Exit(1)
 
         cache = None if no_cache else ResponseCache(out_dir / ".cache")
         result = generate_dataset(
@@ -169,7 +191,13 @@ def gen(
 
 
 def _resolve_template_path(name: str) -> Path:
-    """Resolve a template argument to a file: a direct path, or a name in ./templates."""
+    """Resolve a template argument to a file.
+
+    Search order: a direct path, then ``./templates/<name>.yaml`` and ``./<name>.yaml``
+    in the working directory (so your own templates always win), then the example
+    templates bundled inside the installed package (so ``dugalaxy gen customer-support``
+    works straight after ``pip install``, with no repo clone).
+    """
     candidates = [Path(name)]
     if not name.endswith((".yaml", ".yml")):
         candidates.append(Path("templates") / f"{name}.yaml")
@@ -177,8 +205,16 @@ def _resolve_template_path(name: str) -> Path:
     for candidate in candidates:
         if candidate.is_file():
             return candidate
+
+    if not name.endswith((".yaml", ".yml")):
+        bundled = files("dugalaxy") / "templates" / f"{name}.yaml"
+        if bundled.is_file():
+            return Path(str(bundled))
+
     looked = ", ".join(str(c) for c in candidates)
-    raise DugalaxyError(f"Template '{name}' not found. Looked at: {looked}.")
+    raise DugalaxyError(
+        f"Template '{name}' not found. Looked at: {looked}, and the bundled examples."
+    )
 
 
 def _resolve_config_path(explicit: Path | None) -> Path | None:
@@ -240,13 +276,21 @@ def _estimate_cost(
 
 
 def _print_plan(
-    spec: TemplateSpec, config: Config, *, n: int, seed: int, needs_model: bool
+    spec: TemplateSpec,
+    config: Config,
+    *,
+    n: int,
+    seed: int,
+    needs_model: bool,
+    out_dir: Path,
+    formats: list[str],
 ) -> None:
     console.print(f"[bold]{spec.meta.name}[/bold] — {spec.meta.description}")
     target = (
         "deterministic (no model)" if not needs_model else f"{config.provider} / {config.model}"
     )
     console.print(f"  samples: {n}   seed: {seed}   target: {target}")
+    console.print(f"  output: {out_dir}   formats: {', '.join(formats)}")
     warning = duplicate_warning(spec.scenario, n)
     if warning:
         console.print(f"  [yellow]warning:[/yellow] {warning}")

@@ -27,7 +27,7 @@ from dugalaxy.template.spec import (
     WeightedChoiceVar,
 )
 
-FLAGSHIP = Path(__file__).parent.parent / "templates" / "security-incident-triage.yaml"
+FLAGSHIP = Path(__file__).parent.parent / "src" / "dugalaxy" / "templates" / "customer-support.yaml"
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -60,7 +60,7 @@ def _write(tmp_path: Path, scenario_vars: dict[str, Any], **overrides: Any) -> P
 
 def test_flagship_loads() -> None:
     spec = load_template(FLAGSHIP)
-    assert spec.meta.name == "security-incident-triage"
+    assert spec.meta.name == "customer-support"
     assert spec.meta.version == "1.0"
     assert spec.generation.n == 100
     assert spec.generation.seed == 42
@@ -69,12 +69,12 @@ def test_flagship_loads() -> None:
 def test_flagship_scenario_variable_types() -> None:
     spec = load_template(FLAGSHIP)
     v = spec.scenario.variables
-    assert isinstance(v["process_name"], ChoiceVar)
-    assert isinstance(v["severity"], WeightedChoiceVar)
-    assert isinstance(v["user_index"], RangeVar)
-    assert isinstance(v["timestamp"], FakerVar)
-    assert isinstance(v["username"], ComputedVar)
-    assert isinstance(v["edr_payload"], ObjectVar)
+    assert isinstance(v["product"], ChoiceVar)
+    assert isinstance(v["issue"], WeightedChoiceVar)
+    assert isinstance(v["ticket_number"], RangeVar)
+    assert isinstance(v["opened_at"], FakerVar)
+    assert isinstance(v["ticket_id"], ComputedVar)
+    assert isinstance(v["payload"], ObjectVar)
 
 
 def test_flagship_output_structure() -> None:

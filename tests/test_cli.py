@@ -125,7 +125,7 @@ def test_gen_with_model_uses_ollama_free_no_confirm(
         app,
         [
             "gen",
-            "templates/security-incident-triage.yaml",
+            "src/dugalaxy/templates/customer-support.yaml",
             "--n",
             "2",
             "--seed",
@@ -141,7 +141,7 @@ def test_gen_with_model_uses_ollama_free_no_confirm(
     assert result.exit_code == 0, result.stdout
     assert "free" in result.stdout  # Ollama => free => no confirmation prompt
     assert "produced 2/2" in result.stdout
-    assert (out / "security-incident-triage.yaml").exists()
+    assert (out / "customer-support.yaml").exists()
 
 
 def test_gen_paid_provider_prompts_and_can_abort(
@@ -156,7 +156,7 @@ def test_gen_paid_provider_prompts_and_can_abort(
         app,
         [
             "gen",
-            "templates/security-incident-triage.yaml",
+            "src/dugalaxy/templates/customer-support.yaml",
             "--n",
             "1",
             "--provider",
@@ -174,6 +174,35 @@ def test_gen_paid_provider_prompts_and_can_abort(
     assert "Aborted" in result.stdout
 
 
+def test_gen_unknown_price_warns_and_gates(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A model with no known price must say so explicitly and still block on confirm."""
+    monkeypatch.setattr(
+        cli, "build_provider", lambda config: _FakeProvider(lambda r: r.messages[-1].content)
+    )
+    out = tmp_path / "out"
+    result = runner.invoke(
+        app,
+        [
+            "gen",
+            "src/dugalaxy/templates/customer-support.yaml",
+            "--n",
+            "1",
+            "--provider",
+            "openai_compatible",
+            "--model",
+            "mystery-model-v9",  # absent from the pricing table => priced=False
+            "--api-key-env",
+            "OPENAI_API_KEY",
+            "--output-dir",
+            str(out),
+        ],
+        input="n\n",
+    )
+    assert result.exit_code == 1
+    assert "cost unknown for this model" in result.stdout
+    assert "Aborted" in result.stdout
+
+
 def test_gen_cost_cap_blocks_run(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         cli, "build_provider", lambda config: _FakeProvider(lambda r: r.messages[-1].content)
@@ -183,7 +212,7 @@ def test_gen_cost_cap_blocks_run(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
         app,
         [
             "gen",
-            "templates/security-incident-triage.yaml",
+            "src/dugalaxy/templates/customer-support.yaml",
             "--n",
             "100000",
             "--provider",

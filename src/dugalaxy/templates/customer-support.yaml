@@ -1,0 +1,113 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Dugalaxy flagship example — customer-support conversations.
+#
+# It generates endless varied, *consistent* support dialogues: a seeded engine
+# invents the ground-truth ticket facts, serializes them into a valid JSON payload,
+# and hands them to the model as ground truth — the model only writes the agent's
+# prose reply. Same seed → same facts, forever.
+#
+#   Try it:   dugalaxy gen customer-support --n 5 --seed 42
+#
+# Provider/model settings are NOT in this file — they live in dugalaxy.config.yaml
+# or CLI flags (e.g. --provider, --model). By default this runs against local Ollama.
+# ──────────────────────────────────────────────────────────────────────────────
+
+meta:
+  name: customer-support
+  description: "Customer-support conversations grounded in synthetic ticket data"
+  version: "1.0"
+
+scenario:
+  # Every variable is generated deterministically from the run seed, so the same
+  # seed always reproduces the same facts — independent of every other sample.
+  variables:
+    product:
+      type: choice                     # pick one value, uniformly at random
+      values: ["Nimbus CLI", "Nimbus Cloud", "Nimbus Desktop", "Nimbus Mobile"]
+
+    plan:
+      type: choice
+      values: ["free", "pro", "team", "enterprise"]
+
+    issue:
+      type: weighted_choice            # pick one, with weights (some issues are commoner)
+      values:
+        login: 0.35
+        billing: 0.25
+        crash: 0.20
+        feature-request: 0.10
+        data-export: 0.10
+
+    ticket_number:
+      type: range                      # integer, inclusive on both ends
+      min: 1000
+      max: 9999
+
+    customer:
+      type: faker                      # seeded realistic value (see docs for the kinds)
+      kind: name
+
+    email:
+      type: faker
+      kind: email
+
+    opened_at:
+      type: faker
+      kind: datetime_recent            # an ISO timestamp within the last `days_back` days
+      days_back: 30
+
+    ticket_id:
+      type: computed                   # build a string by interpolating other variables
+      value: "TICKET-{{ scenario.ticket_number }}"
+
+    payload:
+      type: object                     # a structured map — serialized to VALID JSON for you
+      value:                           # (never paste values into a JSON string yourself)
+        ticket_id: "{{ scenario.ticket_id }}"
+        product: "{{ scenario.product }}"
+        plan: "{{ scenario.plan }}"
+        category: "{{ scenario.issue }}"
+        customer: "{{ scenario.customer }}"
+        email: "{{ scenario.email }}"
+        opened_at: "{{ scenario.opened_at }}"
+
+output:
+  type: conversation
+  system_prompt: |
+    You are a friendly, concise support agent for {{ scenario.product }}.
+    Be helpful and specific. Do NOT invent facts. Ground truth (do not contradict):
+      ticket:   {{ scenario.ticket_id }}
+      product:  {{ scenario.product }}
+      plan:     {{ scenario.plan }}
+      issue:    {{ scenario.issue }}
+      customer: {{ scenario.customer }}
+  turns:
+    - role: user
+      content:
+        type: fixed                    # the engine fills this; the model never writes it
+        value: |
+          Hi, I'm {{ scenario.customer }} on the {{ scenario.plan }} plan with a
+          {{ scenario.issue }} issue on {{ scenario.product }}. Here is my ticket:
+          ```json
+          {{ scenario.payload | json(indent=2) }}
+          ```
+          Can you help?
+
+    - role: agent                      # 'agent' (not 'assistant') — matches common seeders
+      content:
+        type: generated                # the MODEL writes this, grounded by the facts above
+        instruction: |
+          Acknowledge ticket {{ scenario.ticket_id }} by name and help {{ scenario.customer }}
+          with their {{ scenario.issue }} issue on {{ scenario.product }} ({{ scenario.plan }}
+          plan). Ask one clarifying question if needed. Keep it under 6 sentences.
+        max_tokens: 600
+        validation:                    # structural checks only — never semantic
+          min_length: 80
+          must_mention: ["{{ scenario.ticket_id }}"]
+
+generation:
+  n: 100
+  seed: 42
+  max_retries: 3
+  output_dir: "./output/customer-support"
+  output_formats: [jsonl, yaml]

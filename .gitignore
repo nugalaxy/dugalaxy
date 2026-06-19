@@ -8,6 +8,8 @@
 dugalaxy.config.yaml
 # local test template — not for the repo
 dawn-test.yaml
+# private dogfooding template (Echo) — kept local, never public
+templates/security-incident-triage.yaml
 *.key
 *.pem
 secrets/

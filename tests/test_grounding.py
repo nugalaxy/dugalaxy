@@ -14,7 +14,7 @@ from dugalaxy.scenario import generate_scenario
 from dugalaxy.template.loader import load_template
 from dugalaxy.template.spec import OutputSpec
 
-FLAGSHIP = Path(__file__).parent.parent / "templates" / "security-incident-triage.yaml"
+FLAGSHIP = Path(__file__).parent.parent / "src" / "dugalaxy" / "templates" / "customer-support.yaml"
 
 
 def _output(spec: dict[str, Any]) -> OutputSpec:
@@ -121,7 +121,7 @@ def test_generated_block_without_validation() -> None:
 
 
 def test_flagship_grounding_produces_valid_embedded_json() -> None:
-    """The user turn embeds the edr_payload object as JSON inside prose — it must parse."""
+    """The user turn embeds the ticket payload object as JSON inside prose — it must parse."""
     spec = load_template(FLAGSHIP)
     facts = generate_scenario(spec.scenario, seed=42, index=0)
     grounded = ground_output(spec.output, facts)
@@ -129,16 +129,16 @@ def test_flagship_grounding_produces_valid_embedded_json() -> None:
     assert isinstance(grounded, GroundedOutput)
     assert grounded.kind == "conversation"
     assert grounded.system_prompt is not None
-    assert facts["username"] in grounded.system_prompt
+    assert facts["customer"] in grounded.system_prompt
 
     user_block = grounded.blocks[0]
     assert isinstance(user_block.value, str)
     embedded = user_block.value.split("```json\n", 1)[1].split("\n```", 1)[0]
-    assert json.loads(embedded) == facts["edr_payload"]
+    assert json.loads(embedded) == facts["payload"]
 
     agent_request = grounded.blocks[1].request
     assert isinstance(agent_request, GeneratedRequest)
-    assert agent_request.must_mention == (facts["parent_process"],)
+    assert agent_request.must_mention == (facts["ticket_id"],)
 
 
 def test_grounding_is_deterministic() -> None:
