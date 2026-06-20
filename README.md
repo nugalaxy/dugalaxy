@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/m2sarah2/dugalaxy/main/assets/dugalaxy_banner.png" alt="dugalaxy — powered by nugalaxy.ai" width="820">
+  <img src="assets/dugalaxy_banner.png" alt="dugalaxy — powered by nugalaxy.ai" width="820">
 </p>
 
 # Dugalaxy
