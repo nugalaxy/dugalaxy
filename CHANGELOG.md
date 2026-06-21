@@ -77,6 +77,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Faker whitelist gained everyday people/place kinds: `city`, `country`, `company`,
   `phone_number` (seeded and deterministic like the rest; golden-tested).
+- **A real template-spec reference** (`docs/template-spec.md`). It was a stub — a list of
+  the vocabulary words but not the *structure*, so neither a human nor an LLM could tell
+  that a `conversation` uses `turns:` while a `document` uses a single `content:`. It now
+  leads with the two output shapes (when to use each, the common mistake, full annotated
+  examples of both), then content blocks, scenario variables, and generation controls.
 - **Documented the supported faker kinds** in `docs/template-spec.md` (a table of every
   `kind:` with what it produces). Previously the valid set appeared only in the error
   message and the code, so `faker` comments pointing "see docs for the kinds" led nowhere;
