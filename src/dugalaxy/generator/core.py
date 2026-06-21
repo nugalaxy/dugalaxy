@@ -15,7 +15,7 @@ from pathlib import Path
 
 from dugalaxy.cost.cache import ResponseCache
 from dugalaxy.emit import IndexEmitter, JsonlEmitter, Sample, SampleEmitter, YamlEmitter
-from dugalaxy.providers.base import CompletionRequest, Message, TextProvider
+from dugalaxy.providers.base import CompletionRequest, Message, ProviderError, TextProvider
 from dugalaxy.reporting.summary import (
     DiversityTracker,
     RunSummary,
@@ -50,6 +50,7 @@ class RunResult:
     summary: RunSummary
     output_files: tuple[Path, ...]
     pre_run_warning: str | None
+    stopped_early: str | None = None  # provider failure mid-run; produced samples kept
 
 
 def _api_role(role: str) -> str:
@@ -266,7 +267,9 @@ def generate_dataset(
     kind = "conversation" if isinstance(template.output, ConversationOutput) else "document"
     tracker = DiversityTracker(categorical_variable_names(template.scenario))
     dropped = 0
+    produced = 0
     total_retries = 0
+    stopped_early: str | None = None
 
     with ExitStack() as stack:
         emitters, files = _open_emitters(
@@ -280,16 +283,28 @@ def generate_dataset(
         for index in range(n):
             facts = generate_scenario(template.scenario, seed=effective_seed, index=index)
             grounded = ground_output(template.output, facts)
-            sample, retries = _build_sample(
-                grounded,
-                facts,
-                index=index,
-                meta=template.meta,
-                seed=effective_seed,
-                provider=provider,
-                cache=cache,
-                max_retries=max_retries,
-            )
+            # A provider failure (e.g. an exhausted rate-limit quota) part-way through a
+            # run stops it gracefully: samples already written to disk are kept and
+            # reported, rather than aborting and discarding the summary of what was
+            # produced. But a failure before *any* sample exists (e.g. the server is down
+            # or the key is bad) is a hard error — re-raise so the CLI shows its actionable
+            # message instead of an empty "stopped early, produced 0".
+            try:
+                sample, retries = _build_sample(
+                    grounded,
+                    facts,
+                    index=index,
+                    meta=template.meta,
+                    seed=effective_seed,
+                    provider=provider,
+                    cache=cache,
+                    max_retries=max_retries,
+                )
+            except ProviderError as exc:
+                if produced == 0:
+                    raise
+                stopped_early = str(exc)
+                break
             total_retries += retries
             if sample is None:
                 dropped += 1
@@ -297,10 +312,12 @@ def generate_dataset(
             for emitter in emitters:
                 emitter.emit(sample)
             tracker.record(facts)
+            produced += 1
 
     summary = tracker.summary(requested=n, dropped=dropped, total_retries=total_retries)
     return RunResult(
         summary=summary,
         output_files=files,
         pre_run_warning=duplicate_warning(template.scenario, n),
+        stopped_early=stopped_early,
     )

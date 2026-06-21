@@ -9,7 +9,7 @@ import yaml
 
 from dugalaxy.cost.cache import ResponseCache
 from dugalaxy.generator.core import GeneratorError, generate_dataset
-from dugalaxy.providers.base import Completion, CompletionRequest, TextProvider
+from dugalaxy.providers.base import Completion, CompletionRequest, ProviderError, TextProvider
 from dugalaxy.template.loader import load_template
 from dugalaxy.template.spec import TemplateSpec
 
@@ -54,6 +54,33 @@ def _document_template() -> TemplateSpec:
             "generation": {"n": 4, "seed": 1, "output_formats": ["jsonl"]},
         }
     )
+
+
+def test_provider_failure_stops_gracefully_and_keeps_output(tmp_path: Path) -> None:
+    # A mid-run provider failure (e.g. an exhausted quota) must stop the run cleanly:
+    # samples already written stay on disk, and the run reports what it produced and why
+    # it stopped — it does not abort and discard the summary.
+    template = load_template(FLAGSHIP)
+
+    def flaky(request: CompletionRequest, call: int) -> str:
+        if call >= 3:  # third model call fails, after two samples have completed
+            raise ProviderError("openai_compatible: HTTP 429 quota exceeded")
+        return request.messages[-1].content
+
+    result = generate_dataset(
+        template,
+        provider=FakeProvider(flaky),
+        n=10,
+        seed=42,
+        output_dir=tmp_path,
+        output_formats=["jsonl"],
+    )
+
+    assert result.stopped_early is not None
+    assert "429" in result.stopped_early
+    assert result.summary.produced == 2
+    lines = (tmp_path / "customer-support.jsonl").read_text(encoding="utf-8").splitlines()
+    assert len(lines) == 2  # the two completed samples survived on disk
 
 
 # ── the headline acceptance: a valid Echo YAML from the flagship ───────────────

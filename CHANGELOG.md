@@ -107,6 +107,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   from `SECURITY.md`, code comments, and test fixtures (the templates were already neutral).
 
 ### Fixed
+- **Bundled templates now actually ship in the wheel.** An unanchored `templates/` entry
+  in `.gitignore` also matched `src/dugalaxy/templates/`, so the built wheel contained no
+  example templates and `dugalaxy list` / `gen quickstart` failed on a clean install.
+  Anchored the ignore to the root workspace only; the wheel now carries `customer-support`
+  and `quickstart`. `discover_templates` also guards a missing bundled directory instead of
+  raising a `FileNotFoundError` traceback.
+- **A provider failure mid-run now stops gracefully instead of discarding the run.** When a
+  model call fails part-way through (e.g. an exhausted rate-limit quota) after at least one
+  sample has been produced, the run stops cleanly, keeps the samples already written to
+  disk, and reports "Stopped early" with the reason and the normal summary (exiting non-zero).
+  A failure before any sample exists still surfaces the actionable connection/auth error.
 - The `dugalaxy init` starter template now matches the realistic conversation shape: the
   customer speaks in natural prose and the structured ticket record grounds the agent in the
   system prompt (previously the customer "pasted" a JSON blob, inherited from an earlier design).

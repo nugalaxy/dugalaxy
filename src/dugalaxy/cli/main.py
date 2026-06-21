@@ -267,6 +267,8 @@ def gen(
             include_meta=include_meta,
         )
         _print_summary(result)
+        if result.stopped_early is not None:
+            raise typer.Exit(1)
     except DugalaxyError as exc:
         err_console.print(f"[red]Error:[/red] {exc}")
         raise typer.Exit(1) from exc
@@ -420,7 +422,11 @@ def _print_estimate(estimate: CostEstimate) -> None:
 
 def _print_summary(result: RunResult) -> None:
     summary = result.summary
-    console.print("\n[bold green]Done.[/bold green]")
+    if result.stopped_early is not None:
+        console.print("\n[bold yellow]Stopped early.[/bold yellow]")
+        console.print(f"  reason: {result.stopped_early}")
+    else:
+        console.print("\n[bold green]Done.[/bold green]")
     console.print(
         f"  produced {summary.produced}/{summary.requested}"
         f"   dropped {summary.dropped}   retries {summary.total_retries}"
