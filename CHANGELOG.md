@@ -113,6 +113,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   from `SECURITY.md`, code comments, and test fixtures (the templates were already neutral).
 
 ### Fixed
+- **Legible schema errors.** An invalid template previously surfaced the raw Pydantic
+  error (location noise, a `errors.pydantic.dev` URL, truncated `input_type=` repr) — hard
+  to parse even for the authors. Errors are now formatted as clean `path: problem` lines,
+  and common output-shape mistakes get a targeted hint (e.g. using `turns:` under a
+  `document` output, or an unknown `output.type`, now explains the right shape).
 - **Bundled templates now actually ship in the wheel.** An unanchored `templates/` entry
   in `.gitignore` also matched `src/dugalaxy/templates/`, so the built wheel contained no
   example templates and `dugalaxy list` / `gen quickstart` failed on a clean install.

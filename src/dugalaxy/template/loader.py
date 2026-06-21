@@ -21,6 +21,63 @@ from .spec import (
 # Matches {{ scenario.var_name }} and {{ scenario.var_name | filter(...) }}
 _VAR_REF_RE = re.compile(r"\{\{\s*scenario\.(\w+)")
 
+_VALID_OUTPUT_TYPES = "conversation, document"
+
+
+def _format_loc(loc: tuple[Any, ...]) -> str:
+    """Render a Pydantic error location tuple as a readable dotted path.
+
+    Integers become ``[i]`` (list indices); everything else is dotted. Discriminated-
+    union tags (e.g. ``document``) appear as path segments — they name the variant the
+    value matched, which is usually what the author wrote as ``type:``.
+    """
+    parts: list[str] = []
+    for seg in loc:
+        if isinstance(seg, int):
+            parts.append(f"[{seg}]")
+        else:
+            parts.append(f".{seg}" if parts else str(seg))
+    return "".join(parts) or "(root)"
+
+
+def _output_shape_hint(raw: dict[str, Any]) -> str | None:
+    """A targeted hint for the most common output-shape mistakes, or ``None``.
+
+    The raw Pydantic message for these is opaque (a missing-field error deep in a
+    discriminated union), so we translate the author's actual structure into advice.
+    """
+    output = raw.get("output")
+    if not isinstance(output, dict):
+        return None
+    out_type = output.get("type")
+    if out_type not in ("conversation", "document"):
+        return f"output.type must be one of: {_VALID_OUTPUT_TYPES} (got '{out_type}')."
+    if out_type == "document" and "turns" in output and "content" not in output:
+        return (
+            "a 'document' output produces one artifact and uses a single 'content:' block, "
+            "not 'turns:'. For a back-and-forth, use 'type: conversation' with 'turns:'."
+        )
+    if out_type == "conversation" and "content" in output and "turns" not in output:
+        return (
+            "a 'conversation' output uses 'turns:', not a single 'content:'. For one "
+            "standalone artifact, use 'type: document' with 'content:'."
+        )
+    return None
+
+
+def _format_validation_error(exc: ValidationError, raw: dict[str, Any]) -> str:
+    """Turn a Pydantic ValidationError into a few clean, human lines (no URLs, no repr)."""
+    lines: list[str] = []
+    for err in exc.errors():
+        loc = _format_loc(err["loc"])
+        detail = "required field is missing" if err["type"] == "missing" else err["msg"]
+        lines.append(f"  - {loc}: {detail}")
+    message = "\n".join(lines)
+    hint = _output_shape_hint(raw)
+    if hint:
+        message += f"\n\nHint: {hint}"
+    return message
+
 
 def extract_refs(value: Any) -> set[str]:
     """Return all ``scenario.X`` variable names referenced anywhere in *value*.
@@ -153,7 +210,9 @@ def load_template(path: Path) -> TemplateSpec:
     try:
         spec = TemplateSpec.model_validate(raw)
     except ValidationError as exc:
-        raise TemplateLoadError(f"Schema error in '{path}':\n{exc}") from exc
+        raise TemplateLoadError(
+            f"'{path}' is not a valid template:\n{_format_validation_error(exc, raw)}"
+        ) from exc
 
     _check_references(spec)
     _check_no_cycles(spec)

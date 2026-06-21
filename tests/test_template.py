@@ -219,6 +219,42 @@ def test_missing_file_raises_load_error(tmp_path: Path) -> None:
         load_template(tmp_path / "no_such_file.yaml")
 
 
+# ── legible schema errors ────────────────────────────────────────────────────
+
+
+def test_schema_error_is_legible_no_pydantic_noise(tmp_path: Path) -> None:
+    # A document output mistakenly given `turns:` instead of `content:`. The message
+    # must be human-readable — no Pydantic URL, no `input_type=`, no truncated repr.
+    p = _write(
+        tmp_path,
+        {"x": {"type": "choice", "values": ["a"]}},
+        output={
+            "type": "document",
+            "turns": [{"role": "user", "content": {"type": "generated", "instruction": "hi"}}],
+        },
+    )
+    with pytest.raises(TemplateLoadError) as exc_info:
+        load_template(p)
+    msg = str(exc_info.value)
+    assert "required field is missing" in msg
+    assert "Hint:" in msg and "single 'content:' block" in msg
+    assert "errors.pydantic.dev" not in msg
+    assert "input_type" not in msg
+
+
+def test_schema_error_invalid_output_type_lists_valid_types(tmp_path: Path) -> None:
+    p = _write(
+        tmp_path,
+        {"x": {"type": "choice", "values": ["a"]}},
+        output={"type": "dataset", "content": {"type": "fixed", "value": "hi"}},
+    )
+    with pytest.raises(TemplateLoadError) as exc_info:
+        load_template(p)
+    msg = str(exc_info.value)
+    assert "conversation, document" in msg
+    assert "dataset" in msg
+
+
 # ── missing reference errors ─────────────────────────────────────────────────
 
 
