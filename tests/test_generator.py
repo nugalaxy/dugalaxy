@@ -83,6 +83,26 @@ def test_provider_failure_stops_gracefully_and_keeps_output(tmp_path: Path) -> N
     assert len(lines) == 2  # the two completed samples survived on disk
 
 
+def test_dropped_sample_reports_why(tmp_path: Path) -> None:
+    # When a generated turn fails validation every attempt, the sample is dropped AND the
+    # run reports the reason — an empty/blank model reply must not silently vanish.
+    template = load_template(FLAGSHIP)
+
+    result = generate_dataset(
+        template,
+        provider=FakeProvider(lambda r, call: "   "),  # blank reply, always fails validation
+        n=1,
+        seed=42,
+        max_retries=2,
+        output_dir=tmp_path,
+        output_formats=["jsonl"],
+    )
+
+    assert result.summary.produced == 0
+    assert result.summary.dropped == 1
+    assert result.drop_reasons == ("output is empty",)
+
+
 def test_on_progress_called_once_per_sample(tmp_path: Path) -> None:
     # The CLI turns this hook into a progress bar; the engine must call it for every
     # processed sample with a monotonically increasing count and a fixed total.

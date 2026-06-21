@@ -123,6 +123,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   from `SECURITY.md`, code comments, and test fixtures (the templates were already neutral).
 
 ### Fixed
+- **Dropped samples now report *why*.** A sample dropped after its generated turn failed
+  validation every retry previously vanished into a bare "dropped 1" with an empty output
+  file — a user couldn't tell an empty model reply from a too-short one or a missing
+  required mention. The run summary now lists the reasons with counts (e.g. "dropped
+  because: output is empty"); the validation reason was already computed, just discarded.
 - **Legible schema errors.** An invalid template previously surfaced the raw Pydantic
   error (location noise, a `errors.pydantic.dev` URL, truncated `input_type=` repr) — hard
   to parse even for the authors. Errors are now formatted as clean `path: problem` lines,

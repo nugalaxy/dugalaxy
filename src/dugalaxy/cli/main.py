@@ -7,6 +7,7 @@ grounded samples — obvious and fast.
 
 import contextlib
 import sys
+from collections import Counter
 from collections.abc import Callable
 from functools import partial
 from importlib.resources import files
@@ -480,6 +481,12 @@ def _print_summary(result: RunResult) -> None:
         f"  produced {summary.produced}/{summary.requested}"
         f"   dropped {summary.dropped}   retries {summary.total_retries}"
     )
+    if result.drop_reasons:
+        counts = Counter(result.drop_reasons)
+        detail = ", ".join(
+            f"{reason} (x{n})" if n > 1 else reason for reason, n in counts.most_common()
+        )
+        console.print(f"  [yellow]dropped because:[/yellow] {detail}")
     console.print(
         f"  diversity: {summary.unique_scenarios} unique scenario combinations "
         f"across the categorical axes ({summary.diversity_ratio:.0%} of produced)"

@@ -51,6 +51,7 @@ class RunResult:
     output_files: tuple[Path, ...]
     pre_run_warning: str | None
     stopped_early: str | None = None  # provider failure mid-run; produced samples kept
+    drop_reasons: tuple[str, ...] = ()  # why dropped samples failed validation (one per drop)
 
 
 def _api_role(role: str) -> str:
@@ -89,25 +90,31 @@ def _generate(
     request: CompletionRequest,
     spec: GeneratedRequest,
     max_retries: int,
-) -> tuple[str | None, int]:
-    """Return ``(text, retries_used)``; ``text`` is ``None`` if every attempt failed.
+) -> tuple[str | None, int, str | None]:
+    """Return ``(text, retries_used, fail_reason)``.
 
-    A cached, still-valid completion short-circuits with zero retries. On a miss the
-    provider is called up to ``max_retries + 1`` times; the first valid completion is
-    cached and returned. Only validated completions are ever cached.
+    ``text`` is ``None`` if every attempt failed, in which case ``fail_reason`` carries
+    the last structural-validation reason (e.g. "output is empty", "too short …") so the
+    caller can tell the user *why* a sample was dropped. A cached, still-valid completion
+    short-circuits with zero retries. On a miss the provider is called up to
+    ``max_retries + 1`` times; the first valid completion is cached and returned. Only
+    validated completions are ever cached.
     """
     if cache is not None:
         cached = cache.get(cache.make_key(request, provider.fingerprint))
         if cached is not None and validate_generated(cached.text, spec).ok:
-            return cached.text, 0
+            return cached.text, 0, None
 
+    last_reason: str | None = None
     for attempt in range(max_retries + 1):
         completion = provider.complete(request)
-        if validate_generated(completion.text, spec).ok:
+        result = validate_generated(completion.text, spec)
+        if result.ok:
             if cache is not None:
                 cache.put(cache.make_key(request, provider.fingerprint), completion)
-            return completion.text, attempt
-    return None, max_retries
+            return completion.text, attempt, None
+        last_reason = result.reason
+    return None, max_retries, last_reason
 
 
 def _build_sample(
@@ -120,8 +127,12 @@ def _build_sample(
     provider: TextProvider | None,
     cache: ResponseCache | None,
     max_retries: int,
-) -> tuple[Sample | None, int]:
-    """Produce one sample (or ``None`` if any generated block was dropped) + retries used."""
+) -> tuple[Sample | None, int, str | None]:
+    """Produce one sample (or ``None`` if a generated block was dropped).
+
+    Returns ``(sample, retries_used, drop_reason)``; ``drop_reason`` is the structural
+    reason the dropped block failed (``None`` when the sample succeeded).
+    """
     session_id = f"{meta.name}_{index:02d}"
     retries = 0
 
@@ -145,10 +156,10 @@ def _build_sample(
                     block.request.instruction,
                     block.request.max_tokens,
                 )
-                text, used = _generate(provider, cache, request, block.request, max_retries)
+                text, used, reason = _generate(provider, cache, request, block.request, max_retries)
                 retries += used
                 if text is None:
-                    return None, retries
+                    return None, retries, reason
                 role = block.role or "assistant"
                 turns.append((role, text))
                 context.append(Message(role="assistant", content=text))
@@ -161,7 +172,7 @@ def _build_sample(
             facts=facts,
             seed=seed,
         )
-        return sample, retries
+        return sample, retries, None
 
     # document
     block = grounded.blocks[0]
@@ -172,10 +183,10 @@ def _build_sample(
         request = _build_request(
             grounded.system_prompt, [], block.request.instruction, block.request.max_tokens
         )
-        text, used = _generate(provider, cache, request, block.request, max_retries)
+        text, used, reason = _generate(provider, cache, request, block.request, max_retries)
         retries += used
         if text is None:
-            return None, retries
+            return None, retries, reason
         document = text
     sample = Sample(
         index=index,
@@ -186,7 +197,7 @@ def _build_sample(
         facts=facts,
         seed=seed,
     )
-    return sample, retries
+    return sample, retries, None
 
 
 def _open_emitters(
@@ -274,6 +285,7 @@ def generate_dataset(
     produced = 0
     total_retries = 0
     stopped_early: str | None = None
+    drop_reasons: list[str] = []
 
     with ExitStack() as stack:
         emitters, files = _open_emitters(
@@ -294,7 +306,7 @@ def generate_dataset(
             # or the key is bad) is a hard error — re-raise so the CLI shows its actionable
             # message instead of an empty "stopped early, produced 0".
             try:
-                sample, retries = _build_sample(
+                sample, retries, drop_reason = _build_sample(
                     grounded,
                     facts,
                     index=index,
@@ -312,6 +324,8 @@ def generate_dataset(
             total_retries += retries
             if sample is None:
                 dropped += 1
+                if drop_reason is not None:
+                    drop_reasons.append(drop_reason)
             else:
                 for emitter in emitters:
                     emitter.emit(sample)
@@ -326,4 +340,5 @@ def generate_dataset(
         output_files=files,
         pre_run_warning=duplicate_warning(template.scenario, n),
         stopped_early=stopped_early,
+        drop_reasons=tuple(drop_reasons),
     )
