@@ -99,6 +99,10 @@ def test_faker_kinds_whitelist() -> None:
         "uuid4",
         "domain_name",
         "mac_address",
+        "city",
+        "country",
+        "company",
+        "phone_number",
         "sha256",
         "file_path",
         "hostname",
@@ -147,6 +151,14 @@ def test_security_faker_kinds(kind: str, pattern: str) -> None:
     value = render_faker(var, 7)
     assert re.fullmatch(pattern, value)
     assert render_faker(var, 7) == value  # reproducible
+
+
+@pytest.mark.parametrize("kind", ["city", "country", "company", "phone_number"])
+def test_people_place_faker_kinds(kind: str) -> None:
+    var = FakerVar(type="faker", kind=kind)
+    value = render_faker(var, 7)
+    assert value  # non-empty
+    assert render_faker(var, 7) == value  # reproducible from the same seed
 
 
 def test_datetime_anchor_overridable() -> None:
@@ -332,6 +344,9 @@ def test_golden_derive_seed() -> None:
 # determinism guard AND the tripwire for an accidental Faker upgrade. If Faker is
 # bumped (see pyproject.toml) and any value here changes, update it deliberately.
 GOLDEN_FAKER = {
+    "city": "North Judithbury",
+    "company": "Rodriguez, Figueroa and Sanchez",
+    "country": "Northern Mariana Islands",
     "datetime_recent": "2024-10-30T22:01:40Z",  # days_back=90; anchored, time-stable
     "domain_name": "rodriguez.com",
     "email": "johnsonjoshua@example.org",
@@ -340,6 +355,7 @@ GOLDEN_FAKER = {
     "ipv4": "129.153.198.180",
     "mac_address": "22:39:0c:8c:7d:72",
     "name": "Allison Hill",
+    "phone_number": "+1-210-343-3218x1960",
     "sha256": "93446f17ed6457b1cbbee6e7fdb203dc137bcc0f1ac76a00d0eaa5fd091c2c29",
     "uuid4": "bdd640fb-0667-4ad1-9c80-317fa3b1799d",
 }

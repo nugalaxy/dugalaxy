@@ -69,6 +69,22 @@ def _mac_address(fake: Faker, **_: Any) -> str:
     return str(fake.mac_address())
 
 
+def _city(fake: Faker, **_: Any) -> str:
+    return str(fake.city())
+
+
+def _country(fake: Faker, **_: Any) -> str:
+    return str(fake.country())
+
+
+def _company(fake: Faker, **_: Any) -> str:
+    return str(fake.company())
+
+
+def _phone_number(fake: Faker, **_: Any) -> str:
+    return str(fake.phone_number())
+
+
 def _sha256(fake: Faker, **_: Any) -> str:
     """A 64-char hex digest — stands in for a file or process hash."""
     return str(fake.sha256())
@@ -92,6 +108,11 @@ FAKER_PROVIDERS: dict[str, FakerProvider] = {
     "uuid4": _uuid4,
     "domain_name": _domain_name,
     "mac_address": _mac_address,
+    # People/place kinds for everyday datasets (support, travel, retail, ...).
+    "city": _city,
+    "country": _country,
+    "company": _company,
+    "phone_number": _phone_number,
     # Infrastructure kinds (hashes, paths, hostnames) for technical datasets.
     "sha256": _sha256,
     "file_path": _file_path,

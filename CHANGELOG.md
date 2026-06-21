@@ -75,6 +75,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `--provider`, `--format`, `--cost-cap`, `--include-meta`, `--no-cache`, `--yes`.
 
 ### Added
+- Faker whitelist gained everyday people/place kinds: `city`, `country`, `company`,
+  `phone_number` (seeded and deterministic like the rest; golden-tested).
+- **Documented the supported faker kinds** in `docs/template-spec.md` (a table of every
+  `kind:` with what it produces). Previously the valid set appeared only in the error
+  message and the code, so `faker` comments pointing "see docs for the kinds" led nowhere;
+  they now point at the real list.
 - The pre-run plan now prints the **resolved template path** (`template: <file>`), so the exact
   file that ran is always visible — closing the silent-precedence surprise when a local template
   shadows a bundled one of the same name.

@@ -44,7 +44,7 @@ scenario:
       max: 9999
 
     customer:
-      type: faker                      # seeded realistic value (see docs for the kinds)
+      type: faker                      # seeded realistic value (kinds: docs/template-spec.md)
       kind: name
 
     ticket_id:
