@@ -46,6 +46,17 @@ def test_resolve_pricing_known_model_from_table() -> None:
     assert price_in > 0 and price_out > 0
 
 
+def test_resolve_pricing_prices_current_default_models() -> None:
+    # Regression guard: models we ship as defaults/examples must be in the price
+    # table so the cost cap can protect them (an absent model is priced=False and
+    # bypasses the cap). gemini-2.5-flash is the example model in the config docs.
+    config = Config(provider="openai_compatible")
+    for model in ("gemini-2.5-flash", "claude-opus-4-8", "gpt-4.1"):
+        price_in, price_out, priced = resolve_pricing("openai_compatible", model, config)
+        assert priced is True, model
+        assert price_in > 0 and price_out > 0, model
+
+
 def test_resolve_pricing_unknown_model_flagged_not_priced() -> None:
     price_in, price_out, priced = resolve_pricing(
         "openai_compatible", "some-new-model", Config(provider="openai_compatible")

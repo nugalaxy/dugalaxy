@@ -12,16 +12,29 @@ from dataclasses import dataclass
 from dugalaxy.config.schema import Config
 from dugalaxy.template.errors import DugalaxyError
 
-# Best-effort USD prices per 1k tokens, (input, output). Override in config when a
-# provider changes prices or a model is missing here.
+# Best-effort USD prices per 1k tokens, (input, output). Providers change prices and
+# add models often, so this is a convenience, not a contract: a missing model is
+# flagged priced=False (cost shown as 0 but not trusted), and any value here can be
+# overridden in config. Anthropic prices are authoritative; the rest are best-effort
+# public rates as of 2026-06 — verify against the provider before relying on them.
 DEFAULT_PRICING: dict[str, tuple[float, float]] = {
+    # OpenAI
     "gpt-4o-mini": (0.00015, 0.00060),
     "gpt-4o": (0.0025, 0.0100),
+    "gpt-4.1": (0.0020, 0.0080),
     "gpt-4.1-mini": (0.00040, 0.00160),
+    # Google Gemini (reached via the openai_compatible adapter)
+    "gemini-2.5-pro": (0.00125, 0.0100),
+    "gemini-2.5-flash": (0.00030, 0.00250),
+    "gemini-2.5-flash-lite": (0.00010, 0.00040),
     "gemini-1.5-flash": (0.000075, 0.00030),
-    "gemini-2.0-flash": (0.00010, 0.00040),
+    # Anthropic (authoritative)
+    "claude-opus-4-8": (0.0050, 0.0250),
+    "claude-sonnet-4-6": (0.0030, 0.0150),
+    "claude-haiku-4-5": (0.0010, 0.0050),
     "claude-3-5-haiku-latest": (0.00080, 0.00400),
     "claude-3-5-sonnet-latest": (0.00300, 0.01500),
+    # DeepSeek
     "deepseek-chat": (0.00027, 0.00110),
 }
 
