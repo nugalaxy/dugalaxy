@@ -89,10 +89,10 @@ never for semantic correctness.
 
 ## Documentation
 
-- [Getting started](docs/getting-started.md)
-- [Template spec](docs/template-spec.md)
-- [Changelog](CHANGELOG.md)
-- [Contributing](CONTRIBUTING.md)
+- [Getting started](https://github.com/m2sarah2/dugalaxy/blob/main/docs/getting-started.md)
+- [Template spec](https://github.com/m2sarah2/dugalaxy/blob/main/docs/template-spec.md)
+- [Changelog](https://github.com/m2sarah2/dugalaxy/blob/main/CHANGELOG.md)
+- [Contributing](https://github.com/m2sarah2/dugalaxy/blob/main/CONTRIBUTING.md)
 - [Security policy](SECURITY.md)
 
 ## License

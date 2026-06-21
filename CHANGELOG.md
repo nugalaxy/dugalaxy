@@ -77,6 +77,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Faker whitelist gained everyday people/place kinds: `city`, `country`, `company`,
   `phone_number` (seeded and deterministic like the rest; golden-tested).
+- **Docs are discoverable after `pip install`.** A freshly installed user has no local
+  repo, so the learning links are now surfaced as URLs where they'll look: the welcome
+  screen has a **Learn** section (getting started, template format, project), `dugalaxy init`
+  points at the format guide, the PyPI sidebar gets a **Documentation** link
+  (`[project.urls]`), and the README's doc links are now absolute so they work on PyPI.
 - **A real template-spec reference** (`docs/template-spec.md`). It was a stub — a list of
   the vocabulary words but not the *structure*, so neither a human nor an LLM could tell
   that a `conversation` uses `turns:` while a `document` uses a single `content:`. It now

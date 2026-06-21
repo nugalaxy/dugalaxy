@@ -69,6 +69,12 @@ err_console = Console(stderr=True)
 # When a generated block does not cap its tokens, assume this many for estimation.
 _DEFAULT_OUTPUT_TOKENS = 512
 
+# Where a freshly pip-installed user can learn the format (they have no local repo, so
+# these must be URLs). Kept here so the welcome screen and `init` point to the same place.
+_REPO_URL = "https://github.com/m2sarah2/dugalaxy"
+_TEMPLATE_GUIDE_URL = f"{_REPO_URL}/blob/main/docs/template-spec.md"
+_GETTING_STARTED_URL = f"{_REPO_URL}/blob/main/docs/getting-started.md"
+
 
 @app.callback(invoke_without_command=True)
 def _main(ctx: typer.Context) -> None:
@@ -102,7 +108,10 @@ def _print_welcome() -> None:
         "  [cyan]dugalaxy gen customer-support[/cyan]   model-written chats (needs a provider)\n"
         "  [cyan]dugalaxy init[/cyan]                   scaffold your own template\n"
         "  [cyan]dugalaxy list[/cyan]                   see available templates\n\n"
-        "[dim]Docs: https://github.com/m2sarah2/dugalaxy[/dim]"
+        "[bold]Learn[/bold]\n"
+        f"  Getting started   [dim]{_GETTING_STARTED_URL}[/dim]\n"
+        f"  Template format   [dim]{_TEMPLATE_GUIDE_URL}[/dim]\n"
+        f"  Project & docs    [dim]{_REPO_URL}[/dim]"
     )
     console.print(
         Panel(
@@ -161,7 +170,8 @@ def init(
         f"([bold]ollama pull llama3.2[/bold]) or a provider via [bold]--provider/--model[/bold].\n"
         f"  No setup yet? Try [bold]dugalaxy gen quickstart[/bold] — deterministic, no model "
         f"needed.\n"
-        f"  Output is written to [bold]./output/{name}/[/bold]."
+        f"  Output is written to [bold]./output/{name}/[/bold].\n"
+        f"  Editing the template? The format guide: [dim]{_TEMPLATE_GUIDE_URL}[/dim]"
     )
 
 

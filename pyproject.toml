@@ -50,6 +50,7 @@ dugalaxy = "dugalaxy.cli.main:app"
 
 [project.urls]
 Homepage = "https://github.com/m2sarah2/dugalaxy"
+Documentation = "https://github.com/m2sarah2/dugalaxy/blob/main/docs/template-spec.md"
 Repository = "https://github.com/m2sarah2/dugalaxy"
 Issues = "https://github.com/m2sarah2/dugalaxy/issues"
 Changelog = "https://github.com/m2sarah2/dugalaxy/blob/main/CHANGELOG.md"
