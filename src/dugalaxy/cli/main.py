@@ -221,7 +221,6 @@ def gen(
         )
 
         gen_cfg = spec.generation
-        n_eff = n if n is not None else gen_cfg.n
         seed_eff = _resolve_seed(seed, gen_cfg.seed)
         retries_eff = max_retries if max_retries is not None else gen_cfg.max_retries
         out_dir = output_dir if output_dir is not None else Path(gen_cfg.output_dir)
@@ -229,6 +228,14 @@ def gen(
 
         needs_model = requires_model(spec.output)
         provider_obj = build_provider(config) if needs_model else None
+
+        # Safe by default: with no explicit --n, a model-backed run produces a single
+        # sample (and says so) rather than firing the template's full batch — a CLI gives
+        # no UI friction to catch a forgotten flag, and an accidental large paid/quota run
+        # is the worst first experience. Deterministic-only runs are free, so they keep
+        # the template's n (variety is the point of the demo).
+        n_capped_to_one = n is None and needs_model
+        n_eff = 1 if n_capped_to_one else (n if n is not None else gen_cfg.n)
 
         _print_plan(
             spec,
@@ -240,6 +247,11 @@ def gen(
             formats=formats,
             template_path=resolved,
         )
+        if n_capped_to_one:
+            console.print(
+                f"  [yellow]no --n given:[/yellow] generating 1 sample (this run uses a "
+                f"model). Pass [bold]--n {gen_cfg.n}[/bold] for the template's full set."
+            )
         estimate = _estimate_cost(spec, config, n=n_eff, seed=seed_eff, needs_model=needs_model)
         _print_estimate(estimate)
         enforce_cap(estimate, config.cost_cap_usd)

@@ -118,6 +118,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sample has been produced, the run stops cleanly, keeps the samples already written to
   disk, and reports "Stopped early" with the reason and the normal summary (exiting non-zero).
   A failure before any sample exists still surfaces the actionable connection/auth error.
+- **Safe-by-default sample count.** `dugalaxy gen` with no `--n` against a model-backed
+  template now produces a single sample (and says so, pointing at `--n N` for the full
+  set) instead of firing the template's production count — a forgotten flag should never
+  trigger a large paid or quota-consuming run. Free deterministic-only runs are unchanged
+  and still honor the template's `n`.
 - Refreshed the cost estimator's price table with current models — `gemini-2.5-flash`
   (and `-pro`/`-flash-lite`), `gpt-4.1`, and the Claude 4.x family (`claude-opus-4-8`,
   `claude-sonnet-4-6`, `claude-haiku-4-5`) — so common models are priced and the cost cap

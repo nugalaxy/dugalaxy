@@ -221,6 +221,47 @@ def test_gen_with_model_uses_ollama_free_no_confirm(
     assert (out / "customer-support.yaml").exists()
 
 
+def test_gen_model_run_without_n_caps_to_one(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Safe by default: a model-backed run with no --n produces a single sample and says
+    # why, instead of firing the template's full batch (here n=100).
+    monkeypatch.setattr(
+        cli, "build_provider", lambda config: _FakeProvider(lambda r: r.messages[-1].content)
+    )
+    out = tmp_path / "out"
+    result = runner.invoke(
+        app,
+        [
+            "gen",
+            "src/dugalaxy/templates/customer-support.yaml",
+            "--seed",
+            "42",
+            "--output-dir",
+            str(out),
+            "-f",
+            "jsonl",
+            "--provider",
+            "ollama",
+        ],
+    )
+    assert result.exit_code == 0, result.stdout
+    assert "no --n given" in result.stdout
+    assert "produced 1/1" in result.stdout
+
+
+def test_gen_deterministic_run_without_n_keeps_template_n(tmp_path: Path) -> None:
+    # A free deterministic run has no expensive path to guard, so no --n keeps the
+    # template's n (variety matters for the demo).
+    template = tmp_path / "det.yaml"
+    template.write_text(_DETERMINISTIC_TEMPLATE, encoding="utf-8")
+    out = tmp_path / "out"
+    result = runner.invoke(app, ["gen", str(template), "--output-dir", str(out), "-f", "jsonl"])
+    assert result.exit_code == 0, result.stdout
+    assert "no --n given" not in result.stdout
+    assert "produced 4/4" in result.stdout
+
+
 def test_gen_paid_provider_prompts_and_can_abort(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
