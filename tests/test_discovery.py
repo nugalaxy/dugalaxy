@@ -56,3 +56,21 @@ def test_non_template_yaml_is_ignored(monkeypatch: pytest.MonkeyPatch, tmp_path:
 
     names = {i.name for i in discover_templates()}
     assert "dugalaxy.config" not in names
+
+
+def test_missing_bundled_dir_degrades_gracefully(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    # An unusual install with no bundled templates dir must return [] — never a
+    # raw traceback from .iterdir() on a path that isn't there.
+    class _Absent:
+        def __truediv__(self, _name: str) -> "_Absent":
+            return self
+
+        def is_dir(self) -> bool:
+            return False
+
+    monkeypatch.setattr("dugalaxy.template.discovery.files", lambda _pkg: _Absent())
+    monkeypatch.chdir(tmp_path)  # no local templates either
+
+    assert discover_templates() == []

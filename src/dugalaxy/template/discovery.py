@@ -60,7 +60,11 @@ def discover_templates() -> list[TemplateInfo]:
             found.append(TemplateInfo(name, description, label, path))
             local_names.add(name)
 
+    # A normal install ships these; guard anyway so a stripped-down or unusual
+    # install degrades to "no bundled templates" instead of a raw traceback.
     bundled_dir = files("dugalaxy") / "templates"
+    if not bundled_dir.is_dir():
+        return found
     for entry in sorted(bundled_dir.iterdir(), key=lambda e: e.name):
         if not entry.name.endswith(".yaml"):
             continue

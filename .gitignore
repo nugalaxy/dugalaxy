@@ -8,9 +8,12 @@
 dugalaxy.config.yaml
 # local test template — not for the repo
 dawn-test.yaml
-# local template workspace — your own templates live here, never committed
-# (shipped examples live inside the package, at src/dugalaxy/templates/)
-templates/
+# local template workspace — your own templates live here, never committed.
+# Anchored to the repo root so it does NOT also hide the shipped examples in
+# src/dugalaxy/templates/ (those must ride along in the wheel).
+/templates/
+# private SOC template kept locally in the package dir — never commit or ship it
+src/dugalaxy/templates/security.yaml
 *.key
 *.pem
 secrets/
