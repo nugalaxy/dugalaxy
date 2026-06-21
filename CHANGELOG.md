@@ -118,6 +118,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sample has been produced, the run stops cleanly, keeps the samples already written to
   disk, and reports "Stopped early" with the reason and the normal summary (exiting non-zero).
   A failure before any sample exists still surfaces the actionable connection/auth error.
+- **Progress feedback during a run.** A long model-backed run no longer looks like a
+  frozen terminal: `generate_dataset` reports per-sample progress through an `on_progress`
+  hook, and the CLI renders it as a `rich` progress bar. The bar is transient and shown
+  only on an interactive terminal, so piped and CI output stay clean.
 - **Safe-by-default sample count.** `dugalaxy gen` with no `--n` against a model-backed
   template now produces a single sample (and says so, pointing at `--n N` for the full
   set) instead of firing the template's production count — a forgotten flag should never

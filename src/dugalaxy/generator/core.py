@@ -8,7 +8,7 @@ dataset and the model's context never accumulate prior samples.
 """
 
 import random
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from contextlib import ExitStack
 from dataclasses import dataclass
 from pathlib import Path
@@ -239,12 +239,16 @@ def generate_dataset(
     output_dir: Path | None = None,
     output_formats: Sequence[str] | None = None,
     include_meta: bool = False,
+    on_progress: Callable[[int, int], None] | None = None,
 ) -> RunResult:
     """Run the full generation pipeline, writing samples to disk as they are produced.
 
     Values default from ``template.generation`` but can be overridden per call. A
     template with no generated content is deterministic-only and needs no provider.
     When *include_meta* is set, each record also carries the scenario facts and seed.
+    *on_progress*, if given, is called as ``on_progress(done, total)`` after each sample
+    is processed — the hook the CLI turns into a progress bar so a long run does not look
+    like a frozen terminal.
     """
     gen = template.generation
     n = gen.n if n is None else n
@@ -308,11 +312,13 @@ def generate_dataset(
             total_retries += retries
             if sample is None:
                 dropped += 1
-                continue
-            for emitter in emitters:
-                emitter.emit(sample)
-            tracker.record(facts)
-            produced += 1
+            else:
+                for emitter in emitters:
+                    emitter.emit(sample)
+                tracker.record(facts)
+                produced += 1
+            if on_progress is not None:
+                on_progress(index + 1, n)
 
     summary = tracker.summary(requested=n, dropped=dropped, total_retries=total_retries)
     return RunResult(

@@ -83,6 +83,25 @@ def test_provider_failure_stops_gracefully_and_keeps_output(tmp_path: Path) -> N
     assert len(lines) == 2  # the two completed samples survived on disk
 
 
+def test_on_progress_called_once_per_sample(tmp_path: Path) -> None:
+    # The CLI turns this hook into a progress bar; the engine must call it for every
+    # processed sample with a monotonically increasing count and a fixed total.
+    template = load_template(FLAGSHIP)
+    calls: list[tuple[int, int]] = []
+
+    generate_dataset(
+        template,
+        provider=FakeProvider(_echo),
+        n=3,
+        seed=42,
+        output_dir=tmp_path,
+        output_formats=["jsonl"],
+        on_progress=lambda done, total: calls.append((done, total)),
+    )
+
+    assert calls == [(1, 3), (2, 3), (3, 3)]
+
+
 # ── the headline acceptance: a valid Echo YAML from the flagship ───────────────
 
 

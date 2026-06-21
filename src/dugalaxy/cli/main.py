@@ -7,6 +7,8 @@ grounded samples — obvious and fast.
 
 import contextlib
 import sys
+from collections.abc import Callable
+from functools import partial
 from importlib.resources import files
 from pathlib import Path
 from typing import Annotated
@@ -14,6 +16,7 @@ from typing import Annotated
 import typer
 from rich.console import Console
 from rich.panel import Panel
+from rich.progress import BarColumn, Progress, SpinnerColumn, TaskProgressColumn, TextColumn
 from rich.prompt import IntPrompt
 
 from dugalaxy.config.loader import load_config
@@ -267,7 +270,8 @@ def gen(
                 raise typer.Exit(1)
 
         cache = None if no_cache else ResponseCache(out_dir / ".cache")
-        result = generate_dataset(
+        run = partial(
+            generate_dataset,
             spec,
             provider=provider_obj,
             cache=cache,
@@ -278,6 +282,7 @@ def gen(
             output_formats=formats,
             include_meta=include_meta,
         )
+        result = _run_with_progress(run, total=n_eff)
         _print_summary(result)
         if result.stopped_early is not None:
             raise typer.Exit(1)
@@ -430,6 +435,28 @@ def _print_estimate(estimate: CostEstimate) -> None:
             f"  estimated cost: [bold]~${estimate.estimated_cost_usd:.4f}[/bold] "
             f"({tokens}) — approximate"
         )
+
+
+def _run_with_progress(run: Callable[..., RunResult], *, total: int) -> RunResult:
+    """Run generation, showing a progress bar in an interactive terminal.
+
+    A long model-backed run otherwise looks like a frozen terminal. The bar is transient
+    (it clears on completion) and is shown only on a real TTY, so piped/CI output stays
+    clean and the run summary is the only thing left behind.
+    """
+    if not console.is_terminal:
+        return run()
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TaskProgressColumn(),
+        TextColumn("{task.completed}/{task.total}"),
+        console=console,
+        transient=True,
+    ) as progress:
+        task = progress.add_task("Generating samples", total=total)
+        return run(on_progress=lambda done, _total: progress.update(task, completed=done))
 
 
 def _print_summary(result: RunResult) -> None:
