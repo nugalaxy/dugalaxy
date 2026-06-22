@@ -87,7 +87,7 @@ _BRAND_URL = "https://nugalaxy.ai"
 # One quiet attribution line. Dugalaxy's mission is to make nugalaxy.ai known — we mark the
 # tool's own chrome (never the user's data), kept to a single dim line so it never nags.
 _BRAND_LINE = f"[dim]Built by [link={_BRAND_URL}]nugalaxy.ai[/link][/dim]"
-_REPO_URL = "https://github.com/m2sarah2/dugalaxy"
+_REPO_URL = "https://github.com/nugalaxy/dugalaxy"
 _TEMPLATE_GUIDE_URL = f"{_REPO_URL}/blob/main/docs/template-spec.md"
 _GETTING_STARTED_URL = f"{_REPO_URL}/blob/main/docs/getting-started.md"
 

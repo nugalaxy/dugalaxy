@@ -6,7 +6,7 @@ focused. Small, well-scoped contributions are the easiest to accept.
 ## Development setup
 
 ```bash
-git clone https://github.com/m2sarah2/dugalaxy.git
+git clone https://github.com/nugalaxy/dugalaxy.git
 cd dugalaxy
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -e ".[dev,api]"

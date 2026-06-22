@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://nugalaxy.ai">
-    <img src="https://raw.githubusercontent.com/m2sarah2/dugalaxy/main/assets/dugalaxy_banner.png" alt="dugalaxy — powered by nugalaxy.ai" width="820">
+    <img src="https://raw.githubusercontent.com/nugalaxy/dugalaxy/main/assets/dugalaxy_banner.png" alt="dugalaxy — powered by nugalaxy.ai" width="820">
   </a>
 </p>
 
@@ -55,7 +55,7 @@ confirmation. After it, it reports produced/dropped/retries and a **diversity me
 variety is provable. Output is written incrementally as **JSONL** (the lingua franca of LLM
 eval/fine-tune datasets) and as a **YAML** dataset envelope; pick with `--format`.
 
-New here? Follow the [getting-started walkthrough](https://github.com/m2sarah2/dugalaxy/blob/main/docs/getting-started.md).
+New here? Follow the [getting-started walkthrough](https://github.com/nugalaxy/dugalaxy/blob/main/docs/getting-started.md).
 
 ---
 
@@ -73,7 +73,7 @@ Three ideas, together, make this a *tool* rather than a chat session:
    model's context never accumulates prior output — so generation scales indefinitely at flat
    cost, with no degradation.
 
-Want to write or tune a template by hand? The [template spec](https://github.com/m2sarah2/dugalaxy/blob/main/docs/template-spec.md)
+Want to write or tune a template by hand? The [template spec](https://github.com/nugalaxy/dugalaxy/blob/main/docs/template-spec.md)
 is the full reference — but you never *need* to read it to get started.
 
 ---
@@ -126,10 +126,10 @@ never for semantic correctness.
 
 ## Documentation
 
-- [Getting started](https://github.com/m2sarah2/dugalaxy/blob/main/docs/getting-started.md)
-- [Template spec](https://github.com/m2sarah2/dugalaxy/blob/main/docs/template-spec.md)
-- [Changelog](https://github.com/m2sarah2/dugalaxy/blob/main/CHANGELOG.md)
-- [Contributing](https://github.com/m2sarah2/dugalaxy/blob/main/CONTRIBUTING.md)
+- [Getting started](https://github.com/nugalaxy/dugalaxy/blob/main/docs/getting-started.md)
+- [Template spec](https://github.com/nugalaxy/dugalaxy/blob/main/docs/template-spec.md)
+- [Changelog](https://github.com/nugalaxy/dugalaxy/blob/main/CHANGELOG.md)
+- [Contributing](https://github.com/nugalaxy/dugalaxy/blob/main/CONTRIBUTING.md)
 - [Security policy](SECURITY.md)
 
 ## License
