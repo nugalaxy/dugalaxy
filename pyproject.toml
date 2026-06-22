@@ -59,6 +59,12 @@ Changelog = "https://github.com/m2sarah2/dugalaxy/blob/main/CHANGELOG.md"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/dugalaxy"]
+# The wheel ships only two vetted templates: a zero-setup demo and the public flagship.
+# Every other file in templates/ (extra GitHub examples, anything git-ignored such as the
+# private SOC template) is excluded here and re-added by force-include — a strict allowlist
+# so nothing unvetted can ever leak into a published wheel, regardless of what sits on disk.
+exclude = ["src/dugalaxy/templates/*.yaml"]
+force-include = { "src/dugalaxy/templates/quickstart.yaml" = "dugalaxy/templates/quickstart.yaml", "src/dugalaxy/templates/customer-support.yaml" = "dugalaxy/templates/customer-support.yaml" }
 
 [tool.ruff]
 line-length = 100

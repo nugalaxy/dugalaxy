@@ -23,12 +23,15 @@ scenario:
     client_country:
       type: faker
       kind: country
-    server_hostname:
+    invoice_date:
       type: faker
-      kind: hostname
-    server_mac:
+      kind: datetime_recent
+    client_phone:
       type: faker
-      kind: mac_address
+      kind: phone_number
+    purchase_order:
+      type: faker
+      kind: uuid4
     unit_price:
       type: range
       min: 250
@@ -52,8 +55,9 @@ scenario:
         client: "{{ scenario.client_name }}"
         email: "{{ scenario.client_email }}"
         location: "{{ scenario.client_city }}, {{ scenario.client_country }}"
-        hardware_hostname: "{{ scenario.server_hostname }}"
-        hardware_mac: "{{ scenario.server_mac }}"
+        phone: "{{ scenario.client_phone }}"
+        invoice_date: "{{ scenario.invoice_date }}"
+        purchase_order: "{{ scenario.purchase_order }}"
         unit_price: "{{ scenario.unit_price }}"
         quantity: "{{ scenario.quantity }}"
         tax_rate: "{{ scenario.tax_rate_percent }}"
@@ -77,15 +81,15 @@ output:
       2. Calculate the Tax Amount (Subtotal multiplied by the tax_rate percentage).
       3. Calculate the Final Total (Subtotal plus Tax Amount).
       
-      The document must explicitly show the math equations and the final exact integer totals. 
-      Include the hardware MAC address ({{ scenario.server_mac }}) and the client email ({{ scenario.client_email }}) in the billing details.
+      The document must explicitly show the math equations and the final exact integer totals.
+      Include the purchase order number ({{ scenario.purchase_order }}) and the client email ({{ scenario.client_email }}) in the billing details.
       Do not hallucinate numbers. Use only the provided telemetry.
     max_tokens: 800
     validation:
       min_length: 250
       must_mention:
         - "{{ scenario.invoice_id }}"
-        - "{{ scenario.server_mac }}"
+        - "{{ scenario.purchase_order }}"
         - "{{ scenario.client_email }}"
 
 generation:
