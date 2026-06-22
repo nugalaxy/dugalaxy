@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Rewrote the README and `docs/getting-started.md` around the guided flow: the README now
+  leads with the one-sentence AI-builder hook and four literal numbered steps
+  (install → `dugalaxy` → `gen quickstart` → `new "<description>"`), with the
+  differentiators moved below the fold; getting-started is a linear walkthrough that mirrors
+  the tool step-for-step. The template spec is cross-linked as "go deeper," never a
+  prerequisite.
+
 ### Added
 - AI template builder (`authoring/template_builder.py`) + `dugalaxy new "<description>"`:
   drafts a template from one sentence. A model writes YAML; we validate it with the real

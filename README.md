@@ -4,76 +4,89 @@
 
 # Dugalaxy
 
-**Author a data template once — generate endless varied, consistent, realistic test data forever. No re-prompting.**
+**Describe the data you want in one sentence — get a template that generates endless varied, consistent, validated samples forever. No re-prompting.**
 
-Dugalaxy turns the intent behind your synthetic data into a durable, reusable asset. Describe
-the *shape* of the data you need once, as a template; then regenerate thousands of varied,
-consistent, validated samples with a single command.
+A chatbot gives you five samples that drift, repeat, and contradict each other. Dugalaxy
+gives you a reusable *template*: a seeded engine invents the ground-truth facts, the model
+writes only the prose around them, and every sample is checked and written to disk. Flat
+cost, reproducible, thousands of samples from one command — and you don't even have to write
+the template by hand.
 
 > **Status:** Early and actively built in the open by a solo developer. v1 focuses on
 > **Template mode**. Expect rapid iteration. Issues and feedback are very welcome.
 
 ---
 
-## Why Dugalaxy is not "just an LLM wrapper"
+## Get started in four steps
+
+```bash
+# 1. Install
+pip install dugalaxy
+
+# 2. Run it with no arguments — it guides you from here
+dugalaxy
+
+# 3. See it work instantly (zero setup — no model, no key, no config)
+dugalaxy gen quickstart
+
+# 4. Make your own from one sentence
+dugalaxy new "short angry support emails about late refunds, each with an order id and a refund amount"
+```
+
+That's it. Step 2 walks you through the rest interactively; the steps below are the same
+path spelled out, in case you'd rather drive it yourself.
+
+- **`dugalaxy`** — the guided first run. It gives you an instant win, then offers to build
+  your own template. (In a script or pipe it just prints help and exits — never hangs.)
+- **`dugalaxy gen quickstart`** — fully **deterministic** synthetic profiles. The seeded
+  engine writes every field, so it needs no model at all. Real data the second you install.
+- **`dugalaxy new "<description>"`** — the AI builder drafts a template from your sentence,
+  validates it against the real loader (retrying if needed), and saves `./<slug>.yaml`. With
+  no model available it starts you from the closest example instead — you're never blocked.
+  The result is a **starting point** to skim, not a verified dataset.
+- **`dugalaxy gen <your-template>`** — generate from it (1 sample first; `--n N` for more).
+- **`dugalaxy doctor`** — plain-words check of your setup, with the one thing to fix next.
+
+Before each run Dugalaxy prints what it will do — sample count, seed, target model, output
+location, an estimated cost, and a duplicate-risk warning — and gates paid runs behind a
+confirmation. After it, it reports produced/dropped/retries and a **diversity metric** so
+variety is provable. Output is written incrementally as **JSONL** (the lingua franca of LLM
+eval/fine-tune datasets) and as a **YAML** dataset envelope; pick with `--format`.
+
+New here? Follow the [getting-started walkthrough](https://github.com/m2sarah2/dugalaxy/blob/main/docs/getting-started.md).
+
+---
+
+## What makes it more than an LLM wrapper
 
 Three ideas, together, make this a *tool* rather than a chat session:
 
 1. **Template as a durable asset.** Author the intent once; regenerate forever with one
-   command. No re-explaining your intent to a chatbot every single time.
-2. **Deterministic grounding.** The model **never invents the structured facts.** A seeded,
-   deterministic engine generates the ground-truth facts of each scenario; those facts are
-   templated directly into structured payloads (guaranteed valid) *and* handed to the model as
+   command. No re-explaining yourself to a chatbot every time.
+2. **Deterministic grounding.** The model **never invents the structured facts.** A seeded
+   engine generates the ground-truth facts of each scenario; those facts are templated into
+   structured payloads (guaranteed valid by serialization) *and* handed to the model as
    ground truth. The model only ever writes free-form prose, conditioned on facts it is given.
 3. **Disk-backed, no context bloat.** Every sample is written to disk as it is produced. The
    model's context never accumulates prior output — so generation scales indefinitely at flat
    cost, with no degradation.
 
+Want to write or tune a template by hand? The [template spec](https://github.com/m2sarah2/dugalaxy/blob/main/docs/template-spec.md)
+is the full reference — but you never *need* to read it to get started.
+
 ---
 
-## Quickstart
-
-```bash
-pip install dugalaxy
-
-# instant — no model, no API key, no config. Produces synthetic profiles to ./output/:
-dugalaxy gen quickstart
-
-# when you want model-written conversations (needs Ollama running or a provider):
-dugalaxy gen customer-support --n 5 --seed 42
-
-# or scaffold your own commented starter template (writes ./my-dataset.yaml):
-dugalaxy init
-dugalaxy gen my-dataset.yaml
-```
-
-`quickstart` is **fully deterministic** — the seeded engine writes every field, so it needs no
-model at all. Templates with model-written prose (like `customer-support`) generate against a
-**local [Ollama](https://ollama.com)** model by default (free and offline; `ollama pull
-llama3.2`), or any hosted API via `--provider`/`--model` or a config file (see *Bring your own
-model* below).
-
-**Where things live:** templates are resolved as a path, as `./templates/<name>.yaml` in your
-working directory, or from the examples bundled with the package (like `customer-support`).
-Generated data is written to the `output_dir` declared in the template (the flagship writes to
-`./output/customer-support/`); the pre-run plan prints the exact destination before it starts.
-
-Before each run Dugalaxy prints what it will do — sample count, seed, target model, output
-location, an estimated cost, and a duplicate-risk warning — and asks for confirmation on paid
-runs. After the run it reports produced/dropped/retries and a **diversity metric** so variety
-is provable.
-
-Output is written incrementally as **JSONL** (the lingua franca of LLM eval/fine-tune datasets)
-and as a **YAML** dataset envelope. Pick formats with `--format jsonl --format yaml`.
-
-### Bring your own model
+## Bring your own model
 
 Dugalaxy talks to OpenAI-compatible APIs (OpenAI, DeepSeek, Groq, Together, …), Anthropic,
-and **local models via Ollama** (fully offline, zero API cost). Which model you use is just
-configuration — copy `dugalaxy.config.example.yaml` to `dugalaxy.config.yaml` and edit.
+and **local models via Ollama** (fully offline, zero API cost — the default). Which model
+you use is just configuration: pass `--provider`/`--model`, or copy
+`dugalaxy.config.example.yaml` to `dugalaxy.config.yaml` and edit. Precedence is
+**CLI flags > config file > template defaults**.
 
-Templates that contain no model-written prose run **fully deterministically — no model, no API
-key required.**
+API keys are **only ever read from the named environment variable** — never from a file on
+disk. Templates that contain no model-written prose run **fully deterministically — no model,
+no API key required.**
 
 ---
 
