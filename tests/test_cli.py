@@ -362,3 +362,69 @@ def test_doctor_hosted_missing_key_reports_and_exits_zero(
     assert "environment check" in result.stdout
     assert "DUGALAXY_NO_SUCH_KEY" in result.stdout
     assert "Next:" in result.stdout
+
+
+# ── bare `dugalaxy`: guided first-run vs. non-interactive ───────────────────────
+
+
+def test_bare_command_non_interactive_prints_welcome_no_hang() -> None:
+    # Under the test runner stdin/stdout are not a tty, so bare `dugalaxy` must print
+    # the static welcome and exit 0 — never block on a prompt nobody can answer.
+    result = runner.invoke(app, [])
+    assert result.exit_code == 0
+    assert "Dugalaxy" in result.stdout
+    assert "Want to see it work" not in result.stdout
+
+
+def test_guided_flow_quickstart_then_has_template(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(cli, "_is_interactive", lambda: True)
+    result = runner.invoke(app, [], input="y\ny\n")
+    assert result.exit_code == 0
+    assert "real synthetic data" in result.stdout
+    assert "One sample" in result.stdout
+    assert "dugalaxy gen <name-or-path>" in result.stdout
+    assert (tmp_path / "output" / "quickstart").is_dir()
+
+
+def test_guided_flow_quickstart_then_no_template(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(cli, "_is_interactive", lambda: True)
+    result = runner.invoke(app, [], input="y\nn\n")
+    assert result.exit_code == 0
+    assert "real synthetic data" in result.stdout
+    assert "dugalaxy init my-dataset" in result.stdout
+
+
+def test_guided_flow_declining_the_win_skips_generation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(cli, "_is_interactive", lambda: True)
+    result = runner.invoke(app, [], input="n\nn\n")
+    assert result.exit_code == 0
+    assert "real synthetic data" not in result.stdout
+    assert "dugalaxy init" in result.stdout
+    assert not (tmp_path / "output").exists()
+
+
+@pytest.mark.parametrize("exc", [cli.DugalaxyError("boom"), OSError("read-only")])
+def test_guided_flow_win_failure_is_legible_not_a_traceback(
+    monkeypatch: pytest.MonkeyPatch, exc: Exception
+) -> None:
+    # The first-run win must never crash the front door: a DugalaxyError (expected) or
+    # an OSError (unwritable cwd) is reported in plain words, exit 0, no traceback.
+    monkeypatch.setattr(cli, "_is_interactive", lambda: True)
+
+    def _boom() -> None:
+        raise exc
+
+    monkeypatch.setattr(cli, "_run_quickstart_win", _boom)
+    result = runner.invoke(app, [], input="y\n")
+    assert result.exit_code == 0
+    assert result.exception is None or isinstance(result.exception, SystemExit)
+    assert "Couldn't run the demo" in result.stderr

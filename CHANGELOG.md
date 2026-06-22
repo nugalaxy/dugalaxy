@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Interactive guided first-run on bare `dugalaxy`: on a real terminal it leads a new
+  user from a zero-setup win (runs the deterministic `quickstart` and shows one real
+  sample) to the next step (`gen` if they have a template, else `init` — the seam
+  where the AI builder lands next). Non-interactive (piped/CI/redirected) prints the
+  static welcome and exits 0, never blocking on a prompt. The win never crashes the
+  front door: a write failure is reported in plain words, not a traceback.
 - `dugalaxy doctor` (`authoring/diagnostics.py`): a plain-words environment health
   check — config presence/validity, provider reachability (pings local Ollama),
   hosted API-key presence (the named env var only, never its value), template count,

@@ -1,4 +1,5 @@
-"""CLI entrypoint. Commands: dugalaxy gen / init / version.
+"""CLI entrypoint. Commands: dugalaxy gen / init / list / doctor / version, plus the
+interactive guided first-run on bare `dugalaxy`.
 
 Wired as the `dugalaxy` console script via pyproject.toml [project.scripts]. The CLI
 is the marketing: it should make the magic moment — one command, endless varied,
@@ -81,7 +82,14 @@ _GETTING_STARTED_URL = f"{_REPO_URL}/blob/main/docs/getting-started.md"
 @app.callback(invoke_without_command=True)
 def _main(ctx: typer.Context) -> None:
     """Author a data template once, generate endless realistic samples forever."""
-    if ctx.invoked_subcommand is None:
+    if ctx.invoked_subcommand is not None:
+        return
+    # Bare `dugalaxy`: on a real terminal, lead the user through a first win and the
+    # next step. Piped/CI/non-interactive gets the short static welcome and exits 0 —
+    # never block on a prompt nobody can answer.
+    if _is_interactive():
+        _guided_first_run()
+    else:
         _print_welcome()
 
 
@@ -137,6 +145,93 @@ def _print_welcome() -> None:
             border_style="magenta",
             padding=(1, 2),
         )
+    )
+
+
+def _is_interactive() -> bool:
+    """True when both stdin and stdout are a real terminal.
+
+    The guided flow asks questions, so it must only run when someone can answer and
+    see the result. Piped input, CI, or a redirected stream falls back to the static
+    welcome (kept as one helper so tests can flip a single switch).
+    """
+    return sys.stdin.isatty() and sys.stdout.isatty()
+
+
+def _guided_first_run() -> None:
+    """Walk a first-time user from a zero-setup win to their own data.
+
+    Step 1 is an instant, no-setup win (the deterministic quickstart). Only after the
+    win do we ask about their own data — and the "no template yet" branch is where the
+    AI builder will live (M3); for now it points at `init`.
+    """
+    from dugalaxy import __version__
+
+    console.print(
+        f"[bold magenta]Dugalaxy[/bold magenta] v{__version__} — let's get you data. "
+        "No manual needed.\n"
+    )
+
+    if typer.confirm("Want to see it work right now? It needs nothing installed", default=True):
+        try:
+            _run_quickstart_win()
+        except (DugalaxyError, OSError) as exc:
+            # This is the very first screen a new user sees — never crash it with a
+            # traceback. A DugalaxyError is an expected failure; an OSError covers a
+            # cwd we can't write the demo output into (read-only/sandboxed dir).
+            err_console.print(
+                f"[red]Couldn't run the demo:[/red] {exc}\n"
+                "Try again from a writable directory, or run [cyan]dugalaxy doctor[/cyan]."
+            )
+            return
+
+    if typer.confirm("Do you already have a template?", default=False):
+        console.print(
+            "Great — run:  [cyan]dugalaxy gen <name-or-path>[/cyan]\n"
+            "  Stuck? Run [cyan]dugalaxy doctor[/cyan] to check your setup."
+        )
+    else:
+        _suggest_make_a_template()
+
+
+def _run_quickstart_win() -> None:
+    """Generate the bundled quickstart dataset and show the user one real sample."""
+    resolved = _resolve_template_path("quickstart")
+    spec = load_template(resolved)
+    out_dir = Path(spec.generation.output_dir)
+    result = generate_dataset(spec, output_dir=out_dir)
+
+    console.print(
+        f"\n[green]Done.[/green] Wrote {result.summary.produced} samples to [bold]{out_dir}[/bold]"
+    )
+    sample = _first_sample_line(result)
+    if sample is not None:
+        console.print("[dim]One sample:[/dim]")
+        console.print(f"  {sample}")
+    console.print(
+        "\n[bold]That's real synthetic data, generated locally[/bold] — now let's make YOURS.\n"
+    )
+
+
+def _first_sample_line(result: RunResult) -> str | None:
+    """Return the first line of the run's JSONL output, if any was written."""
+    for path in result.output_files:
+        if path.suffix == ".jsonl":
+            try:
+                with path.open(encoding="utf-8") as handle:
+                    return handle.readline().strip() or None
+            except OSError:
+                return None
+    return None
+
+
+def _suggest_make_a_template() -> None:
+    """Point a user with no template at the fastest way to get one (pre-AI-builder)."""
+    console.print(
+        "No problem — scaffold one to edit:\n"
+        "  [cyan]dugalaxy init my-dataset[/cyan]   then   [cyan]dugalaxy gen my-dataset[/cyan]\n"
+        "  See what's available:   [cyan]dugalaxy list[/cyan]\n"
+        f"  Template format guide:  [dim]{_TEMPLATE_GUIDE_URL}[/dim]"
     )
 
 
