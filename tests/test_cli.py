@@ -60,6 +60,7 @@ def test_version() -> None:
     result = runner.invoke(app, ["version"])
     assert result.exit_code == 0
     assert "dugalaxy" in result.stdout
+    assert "nugalaxy.ai" in result.stdout
 
 
 # ── welcome + list + interactive selection ─────────────────────────────────────
@@ -70,6 +71,7 @@ def test_welcome_shown_with_no_command() -> None:
     assert result.exit_code == 0
     assert "Dugalaxy" in result.stdout
     assert "Get started" in result.stdout
+    assert "nugalaxy.ai" in result.stdout
 
 
 def test_list_includes_bundled_customer_support() -> None:
@@ -118,6 +120,8 @@ def test_gen_deterministic_only(tmp_path: Path) -> None:
 
     assert result.exit_code == 0, result.stdout
     assert "produced 4/4" in result.stdout
+    # a quiet brand line follows a successful run (the tool's chrome, not the data)
+    assert "nugalaxy.ai" in result.stdout
     # the plan shows exactly which file ran (closes the silent-precedence surprise)
     assert "template:" in result.stdout
     lines = (out / "det.jsonl").read_text(encoding="utf-8").splitlines()

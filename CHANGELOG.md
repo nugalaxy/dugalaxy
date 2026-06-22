@@ -21,6 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   bash/zsh (`export`), noting it lives only in the current terminal window.
 
 ### Added
+- A single quiet `Built by nugalaxy.ai` attribution line on the welcome screen and after a
+  successful `gen`, plus `· nugalaxy.ai` on `dugalaxy version`. Marks the tool's own chrome
+  only — never the user's generated data — and the README banner now links to nugalaxy.ai.
 - AI template builder (`authoring/template_builder.py`) + `dugalaxy new "<description>"`:
   drafts a template from one sentence. A model writes YAML; we validate it with the real
   loader and, on failure, hand the legible error back to the model to fix (up to 3 tries).

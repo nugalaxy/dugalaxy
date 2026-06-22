@@ -83,6 +83,10 @@ _DEFAULT_OUTPUT_TOKENS = 512
 
 # Where a freshly pip-installed user can learn the format (they have no local repo, so
 # these must be URLs). Kept here so the welcome screen and `init` point to the same place.
+_BRAND_URL = "https://nugalaxy.ai"
+# One quiet attribution line. Dugalaxy's mission is to make nugalaxy.ai known — we mark the
+# tool's own chrome (never the user's data), kept to a single dim line so it never nags.
+_BRAND_LINE = f"[dim]Built by [link={_BRAND_URL}]nugalaxy.ai[/link][/dim]"
 _REPO_URL = "https://github.com/m2sarah2/dugalaxy"
 _TEMPLATE_GUIDE_URL = f"{_REPO_URL}/blob/main/docs/template-spec.md"
 _GETTING_STARTED_URL = f"{_REPO_URL}/blob/main/docs/getting-started.md"
@@ -145,7 +149,8 @@ def _print_welcome() -> None:
         "[bold]Learn[/bold]\n"
         f"  Getting started   [dim]{_GETTING_STARTED_URL}[/dim]\n"
         f"  Template format   [dim]{_TEMPLATE_GUIDE_URL}[/dim]\n"
-        f"  Project & docs    [dim]{_REPO_URL}[/dim]"
+        f"  Project & docs    [dim]{_REPO_URL}[/dim]\n\n"
+        f"{_BRAND_LINE}"
     )
     console.print(
         Panel(
@@ -356,7 +361,7 @@ def version() -> None:
     """Print the installed Dugalaxy version."""
     from dugalaxy import __version__
 
-    typer.echo(f"dugalaxy {__version__}")
+    typer.echo(f"dugalaxy {__version__} · nugalaxy.ai")
 
 
 @app.command(name="list")
@@ -818,6 +823,8 @@ def _print_summary(result: RunResult) -> None:
     )
     for path in result.output_files:
         console.print(f"  wrote {path}")
+    if result.stopped_early is None:
+        console.print(f"\n{_BRAND_LINE}")
 
 
 if __name__ == "__main__":
