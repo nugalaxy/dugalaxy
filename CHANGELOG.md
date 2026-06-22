@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   differentiators moved below the fold; getting-started is a linear walkthrough that mirrors
   the tool step-for-step. The template spec is cross-linked as "go deeper," never a
   prerequisite.
+- Hosted-model setup docs are now self-contained and cross-platform: the README and
+  getting-started show the `dugalaxy.config.yaml` to drop in the working directory inline
+  (no longer pointing pip users at a repo-only example file they don't have) and give the
+  exact command to set the API-key environment variable in both PowerShell (`$env:`) and
+  bash/zsh (`export`), noting it lives only in the current terminal window.
 
 ### Added
 - AI template builder (`authoring/template_builder.py`) + `dugalaxy new "<description>"`:

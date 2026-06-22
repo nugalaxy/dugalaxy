@@ -79,13 +79,35 @@ is the full reference — but you never *need* to read it to get started.
 ## Bring your own model
 
 Dugalaxy talks to OpenAI-compatible APIs (OpenAI, DeepSeek, Groq, Together, …), Anthropic,
-and **local models via Ollama** (fully offline, zero API cost — the default). Which model
-you use is just configuration: pass `--provider`/`--model`, or copy
-`dugalaxy.config.example.yaml` to `dugalaxy.config.yaml` and edit. Precedence is
+and **local models via Ollama** (fully offline, zero API cost — the default). Using a hosted
+model is two small steps:
+
+**1. Put a `dugalaxy.config.yaml` in the directory you run from** (it's read from your current
+working directory):
+
+```yaml
+provider: openai_compatible
+base_url: https://api.openai.com/v1
+model: gpt-4o-mini
+api_key_env: OPENAI_API_KEY     # the NAME of the env var — never the key itself
+cost_cap_usd: 1.00
+```
+
+**2. Set the environment variable that holds your key** (it lives only in that terminal
+window — API keys are **never read from a file on disk**):
+
+```powershell
+$env:OPENAI_API_KEY = "sk-your-key-here"     # Windows PowerShell
+```
+```bash
+export OPENAI_API_KEY="sk-your-key-here"     # macOS / Linux
+```
+
+Then run `dugalaxy doctor` to confirm the config, provider, and key are all green. Prefer no
+file? Pass `--provider`/`--model`/`--api-key-env` as flags instead. Precedence is
 **CLI flags > config file > template defaults**.
 
-API keys are **only ever read from the named environment variable** — never from a file on
-disk. Templates that contain no model-written prose run **fully deterministically — no model,
+Templates that contain no model-written prose run **fully deterministically — no model,
 no API key required.**
 
 ---

@@ -84,23 +84,55 @@ cost and asks you to confirm; an unpriced model is gated until you say yes.
 
 ## 6. Use a hosted model (optional)
 
-To use a hosted API instead of Ollama, either pass flags
-(`--provider openai_compatible --model gpt-4o-mini --api-key-env OPENAI_API_KEY`) or use a
-config file:
+No Ollama? Use a hosted API instead. It's two things: a **config file** that says *which*
+model, and an **environment variable** that holds your key.
 
-```bash
-cp dugalaxy.config.example.yaml dugalaxy.config.yaml   # then edit it
+**a. Drop a config file in the directory you run `dugalaxy` from.** Dugalaxy looks for
+`dugalaxy.config.yaml` in your current working directory — so it must live there, next to
+where you run the command. Create it with this (edit for your provider):
+
+```yaml
+# dugalaxy.config.yaml
+provider: openai_compatible
+base_url: https://api.openai.com/v1      # or your provider's endpoint
+model: gpt-4o-mini
+api_key_env: OPENAI_API_KEY              # the NAME of the env var — never the key itself
+cost_cap_usd: 1.00
 ```
 
-API keys are **only ever read from the named environment variable** — never from a file on
-disk. Set it in your shell (or a `.env` you export):
+**b. Set the environment variable that holds your key.** API keys are **only ever read from
+this named environment variable** — never from a file on disk. The command depends on your
+shell, and it lasts only for the current terminal window:
 
-```bash
-cp .env.example .env   # then edit .env
+```powershell
+# Windows PowerShell
+$env:OPENAI_API_KEY = "sk-your-key-here"
 ```
 
-Precedence is **CLI flags > config file > template defaults**. Not sure your setup is right?
-Run `dugalaxy doctor` for a plain-words check and the one thing to fix next.
+```bash
+# macOS / Linux (bash, zsh)
+export OPENAI_API_KEY="sk-your-key-here"
+```
+
+To make it permanent, add that line to your PowerShell `$PROFILE` (Windows) or `~/.bashrc` /
+`~/.zshrc` (macOS/Linux), or keep it in a `.env` file you source before running.
+
+**c. Check it worked:**
+
+```bash
+dugalaxy doctor
+```
+
+You want a ✓ on **Config**, **Provider**, and **API key**. If the key line is ✗, you set the
+variable in a different window, or the name doesn't match `api_key_env` in your config.
+
+Prefer no file at all? Pass everything as flags instead — you still set the env var first:
+
+```bash
+dugalaxy gen customer-support --provider openai_compatible --model gpt-4o-mini --api-key-env OPENAI_API_KEY
+```
+
+Precedence is **CLI flags > config file > template defaults**.
 
 ## How it fits together
 
@@ -120,8 +152,10 @@ full reference — go deeper only when you want to.
   bundled example name (e.g. `customer-support`). The error lists every location it checked.
 - **Connection refused / Ollama errors** — Ollama isn't running or the model isn't pulled.
   Start Ollama and run `ollama pull <model>`, or switch to a hosted provider with `--provider`.
-- **`API key environment variable '…' is not set`** — export the named variable before
-  running; Dugalaxy never reads keys from disk. `dugalaxy doctor` checks this for you.
+- **`API key environment variable '…' is not set`** — set the named variable in the same
+  terminal before running: `$env:OPENAI_API_KEY = "..."` (PowerShell) or
+  `export OPENAI_API_KEY="..."` (bash/zsh). Dugalaxy never reads keys from disk, and the
+  variable only lives in the window you set it in. `dugalaxy doctor` checks this for you.
 - **`cost unknown for this model — you may be billed`** — there's no price for that model in
   the built-in table, so the cost cap can't protect you. Set `price_per_1k_input` /
   `price_per_1k_output` in your config to enable the cap, or confirm to proceed anyway.
