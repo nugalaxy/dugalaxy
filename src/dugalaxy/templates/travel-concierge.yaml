@@ -1,0 +1,112 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Dugalaxy flagship example — travel-concierge conversations.
+# Generates multi-turn travel planning dialogues grounded in a synthetic 
+# traveler profile. Tests an agent's ability to maintain context, use ground-truth 
+# JSON data, and handle user negotiations/preferences mid-conversation.
+# Try it:   dugalaxy gen travel-concierge --n 10 --seed 88
+# ──────────────────────────────────────────────────────────────────────────────
+meta:
+  name: travel-concierge
+  description: "Multi-turn travel planning conversations between a client and an AI luxury travel concierge"
+  version: "1.0"
+
+scenario:
+  variables:
+    traveler_name:
+      type: faker
+      kind: name
+    traveler_email:
+      type: faker
+      kind: email
+    departure_city:
+      type: choice
+      values:
+        - "Paris"
+        - "Dubai"
+        - "Vancouver"
+    destination_city:
+      type: choice
+      values:
+        - "Paris"
+        - "Dubai"
+        - "Vancouver"
+    trip_type:
+      type: choice
+      values:
+        - "business"
+        - "honeymoon"
+        - "family vacation"
+        - "solo backpacking"
+    budget_tier:
+      type: choice
+      values:
+        - "budget"
+        - "mid-range"
+        - "luxury"
+    booking_ref:
+      type: range
+      min: 5000
+      max: 9999
+    inquiry_id:
+      type: computed
+      value: "TRIP-{{ scenario.booking_ref }}"
+    traveler_profile:
+      type: object
+      value:
+        inquiry_id: "{{ scenario.inquiry_id }}"
+        traveler: "{{ scenario.traveler_name }}"
+        email: "{{ scenario.traveler_email }}"
+        from: "{{ scenario.departure_city }}"
+        to: "{{ scenario.destination_city }}"
+        trip_type: "{{ scenario.trip_type }}"
+        budget_tier: "{{ scenario.budget_tier }}"
+
+output:
+  type: conversation
+  system_prompt: |
+    You are a world-class, personalized travel concierge. 
+    Use the traveler's profile below as ground truth — do not contradict it. 
+    Greet the traveler by name, cite their inquiry ID, and help them plan their {{ scenario.trip_type }} trip to {{ scenario.destination_city }}.
+    
+    Traveler profile:
+    ```json {{ scenario.traveler_profile | json(indent=2) }}```
+  turns:
+    - role: user
+      content:
+        type: fixed
+        value: |
+          Hey! I'm {{ scenario.traveler_name }}. I'm planning a {{ scenario.trip_type }} trip from {{ scenario.departure_city }} to {{ scenario.destination_city }}. 
+          I'm looking for a {{ scenario.budget_tier }} experience. Can you give me some initial flight and hotel ideas? My email is {{ scenario.traveler_email }}.
+    - role: agent
+      content:
+        type: generated
+        instruction: |
+          Reply to {{ scenario.traveler_name }}. Acknowledge inquiry {{ scenario.inquiry_id }} and their {{ scenario.budget_tier }} {{ scenario.trip_type }} trip to {{ scenario.destination_city }}. 
+          Invent two highly specific, realistic recommendations (one flight option, one hotel option) that perfectly match their budget and trip type. End with a clarifying question about their exact travel dates or specific preferences. Keep it under 6 sentences.
+        max_tokens: 600
+        validation:
+          min_length: 100
+          must_mention:
+            - "{{ scenario.inquiry_id }}"
+            - "{{ scenario.destination_city }}"
+    - role: user
+      content:
+        type: generated
+        instruction: |
+          The user replies to the agent's suggestions. They love the hotel idea but want to adjust the flight timing (e.g., prefer direct flights or red-eye). Keep it conversational and under 3 sentences.
+        max_tokens: 150
+    - role: agent
+      content:
+        type: generated
+        instruction: |
+          The agent acknowledges the flight preference, confirms the updated itinerary conceptually, and provides a mock booking link or next step to finalize the reservation. Warm, professional, and concise.
+        max_tokens: 300
+
+generation:
+  n: 50
+  seed: 88
+  max_retries: 3
+  output_dir: "./output/travel-concierge"
+  output_formats:
+    - jsonl
+    - yaml

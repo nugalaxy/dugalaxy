@@ -1,0 +1,98 @@
+meta:
+  name: b2b-invoice-generation
+  description: "Automated B2B invoice documents requiring precise numeric extraction and arithmetic"
+  version: "1.0"
+
+scenario:
+  variables:
+    invoice_id:
+      type: faker
+      kind: uuid4
+    vendor_company:
+      type: faker
+      kind: company
+    client_name:
+      type: faker
+      kind: name
+    client_email:
+      type: faker
+      kind: email
+    client_city:
+      type: faker
+      kind: city
+    client_country:
+      type: faker
+      kind: country
+    server_hostname:
+      type: faker
+      kind: hostname
+    server_mac:
+      type: faker
+      kind: mac_address
+    unit_price:
+      type: range
+      min: 250
+      max: 1500
+    quantity:
+      type: range
+      min: 3
+      max: 25
+    tax_rate_percent:
+      type: choice
+      values:
+        - "5"
+        - "8"
+        - "12"
+        - "20"
+    order_record:
+      type: object
+      value:
+        invoice_id: "{{ scenario.invoice_id }}"
+        vendor: "{{ scenario.vendor_company }}"
+        client: "{{ scenario.client_name }}"
+        email: "{{ scenario.client_email }}"
+        location: "{{ scenario.client_city }}, {{ scenario.client_country }}"
+        hardware_hostname: "{{ scenario.server_hostname }}"
+        hardware_mac: "{{ scenario.server_mac }}"
+        unit_price: "{{ scenario.unit_price }}"
+        quantity: "{{ scenario.quantity }}"
+        tax_rate: "{{ scenario.tax_rate_percent }}"
+
+output:
+  type: document
+  content:
+    type: generated
+    instruction: |
+      You are an automated billing engine for {{ scenario.vendor_company }}.
+      Generate a formal, itemized B2B invoice document for {{ scenario.client_name }}.
+      
+      Here is the raw order telemetry:
+      ```json
+      {{ scenario.order_record | json(indent=2) }}
+      ```
+      
+      CRITICAL NUMERIC TEST:
+      You must accurately perform the following math based EXACTLY on the numbers provided in the JSON telemetry:
+      1. Calculate the Subtotal (unit_price multiplied by quantity).
+      2. Calculate the Tax Amount (Subtotal multiplied by the tax_rate percentage).
+      3. Calculate the Final Total (Subtotal plus Tax Amount).
+      
+      The document must explicitly show the math equations and the final exact integer totals. 
+      Include the hardware MAC address ({{ scenario.server_mac }}) and the client email ({{ scenario.client_email }}) in the billing details.
+      Do not hallucinate numbers. Use only the provided telemetry.
+    max_tokens: 800
+    validation:
+      min_length: 250
+      must_mention:
+        - "{{ scenario.invoice_id }}"
+        - "{{ scenario.server_mac }}"
+        - "{{ scenario.client_email }}"
+
+generation:
+  n: 50
+  seed: 999
+  max_retries: 3
+  output_dir: "./output/b2b-invoice-generation"
+  output_formats:
+    - jsonl
+    - yaml
