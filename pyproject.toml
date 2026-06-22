@@ -9,7 +9,7 @@ description = "Author a data template once, generate endless realistic, consiste
 readme = "README.md"
 requires-python = ">=3.10"
 license = "AGPL-3.0-only"
-authors = [{ name = "Sara", email = "info@nugalaxy.ai" }]
+authors = [{ name = "Sara Mo", email = "info@nugalaxy.ai" }]
 keywords = ["synthetic-data", "test-data", "llm-eval", "fine-tuning", "data-generation"]
 classifiers = [
     "Development Status :: 3 - Alpha",
