@@ -2,6 +2,7 @@
 
 import json
 from collections.abc import Callable
+from importlib.resources import files as files_resource
 from pathlib import Path
 
 import httpx
@@ -11,7 +12,8 @@ from typer.testing import CliRunner
 import dugalaxy.cli.main as cli
 from dugalaxy.cli.main import app
 from dugalaxy.providers import OllamaProvider
-from dugalaxy.providers.base import Completion, CompletionRequest, TextProvider
+from dugalaxy.providers.base import Completion, CompletionRequest, ProviderError, TextProvider
+from dugalaxy.template.errors import DugalaxyError
 from dugalaxy.template.loader import load_template
 
 runner = CliRunner()
@@ -394,10 +396,12 @@ def test_guided_flow_quickstart_then_no_template(
 ) -> None:
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(cli, "_is_interactive", lambda: True)
-    result = runner.invoke(app, [], input="y\nn\n")
+    # win yes, no-template, then an empty description bows out of the builder cleanly.
+    result = runner.invoke(app, [], input="y\nn\n\n")
     assert result.exit_code == 0
     assert "real synthetic data" in result.stdout
-    assert "dugalaxy init my-dataset" in result.stdout
+    assert "Describe your data" in result.stdout
+    assert "dugalaxy new" in result.stdout
 
 
 def test_guided_flow_declining_the_win_skips_generation(
@@ -405,14 +409,14 @@ def test_guided_flow_declining_the_win_skips_generation(
 ) -> None:
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(cli, "_is_interactive", lambda: True)
-    result = runner.invoke(app, [], input="n\nn\n")
+    result = runner.invoke(app, [], input="n\nn\n\n")
     assert result.exit_code == 0
     assert "real synthetic data" not in result.stdout
-    assert "dugalaxy init" in result.stdout
+    assert "Describe your data" in result.stdout
     assert not (tmp_path / "output").exists()
 
 
-@pytest.mark.parametrize("exc", [cli.DugalaxyError("boom"), OSError("read-only")])
+@pytest.mark.parametrize("exc", [DugalaxyError("boom"), OSError("read-only")])
 def test_guided_flow_win_failure_is_legible_not_a_traceback(
     monkeypatch: pytest.MonkeyPatch, exc: Exception
 ) -> None:
@@ -428,3 +432,131 @@ def test_guided_flow_win_failure_is_legible_not_a_traceback(
     assert result.exit_code == 0
     assert result.exception is None or isinstance(result.exception, SystemExit)
     assert "Couldn't run the demo" in result.stderr
+
+
+# ── new: AI template builder ────────────────────────────────────────────────────
+
+_VALID_TEMPLATE = (files_resource("dugalaxy") / "templates" / "customer-support.yaml").read_text(
+    encoding="utf-8"
+)
+
+
+def test_new_with_model_creates_a_template(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        cli, "build_provider", lambda config: _FakeProvider(lambda r: _VALID_TEMPLATE)
+    )
+    result = runner.invoke(app, ["new", "support chats", "--name", "mine"])
+    assert result.exit_code == 0
+    assert "Created" in result.stdout
+    assert "starting point" in result.stdout
+    assert (tmp_path / "mine.yaml").exists()
+    load_template(tmp_path / "mine.yaml")
+
+
+def test_new_without_model_falls_back_to_example(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    def _no_key(config: object) -> object:
+        raise ProviderError("no key")
+
+    monkeypatch.setattr(cli, "build_provider", _no_key)
+    result = runner.invoke(app, ["new", "support chats", "--name", "mine"])
+    assert result.exit_code == 0
+    assert "closest example" in result.stdout
+    load_template(tmp_path / "mine.yaml")  # still a valid, runnable file
+
+
+def test_guided_flow_no_template_invokes_builder(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(cli, "_is_interactive", lambda: True)
+    monkeypatch.setattr(
+        cli, "build_provider", lambda config: _FakeProvider(lambda r: _VALID_TEMPLATE)
+    )
+    # decline the win, say no-template, then give a description for the builder.
+    result = runner.invoke(app, [], input="n\nn\nsupport chats\n")
+    assert result.exit_code == 0
+    assert "Created" in result.stdout
+    assert any(p.suffix == ".yaml" for p in tmp_path.iterdir())
+
+
+def test_new_unpriced_model_gates_and_can_decline(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # An unpriced model must hard-gate before spending money; declining writes nothing.
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-x")
+    monkeypatch.setattr(
+        cli, "build_provider", lambda config: _FakeProvider(lambda r: _VALID_TEMPLATE)
+    )
+    result = runner.invoke(
+        app,
+        [
+            "new",
+            "support chats",
+            "--name",
+            "mine",
+            "--provider",
+            "openai_compatible",
+            "--model",
+            "mystery-model",
+            "--api-key-env",
+            "OPENAI_API_KEY",
+        ],
+        input="n\n",
+    )
+    assert result.exit_code == 1
+    assert "cost unknown" in result.stdout
+    assert not (tmp_path / "mine.yaml").exists()
+
+
+def test_new_unpriced_model_proceeds_with_yes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-x")
+    monkeypatch.setattr(
+        cli, "build_provider", lambda config: _FakeProvider(lambda r: _VALID_TEMPLATE)
+    )
+    result = runner.invoke(
+        app,
+        [
+            "new",
+            "support chats",
+            "--name",
+            "mine",
+            "--yes",
+            "--provider",
+            "openai_compatible",
+            "--model",
+            "mystery-model",
+            "--api-key-env",
+            "OPENAI_API_KEY",
+        ],
+    )
+    assert result.exit_code == 0
+    assert (tmp_path / "mine.yaml").exists()
+
+
+def test_new_cost_cap_blocks_before_any_model_call(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-x")
+    cfg = tmp_path / "dugalaxy.config.yaml"
+    cfg.write_text(
+        "provider: openai_compatible\nmodel: gpt-4o-mini\n"
+        "api_key_env: OPENAI_API_KEY\ncost_cap_usd: 0.0000001\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        cli, "build_provider", lambda config: _FakeProvider(lambda r: _VALID_TEMPLATE)
+    )
+    result = runner.invoke(app, ["new", "support chats", "--name", "mine", "--config", str(cfg)])
+    assert result.exit_code == 1
+    assert "exceeds the cap" in result.stderr
+    assert not (tmp_path / "mine.yaml").exists()

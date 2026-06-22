@@ -6,5 +6,23 @@ with diagnostics (`dugalaxy doctor`); the AI template builder lands here later.
 """
 
 from .diagnostics import Check, Diagnosis, diagnose
+from .template_builder import (
+    BUILDER_MAX_OUTPUT_TOKENS,
+    DEFAULT_MAX_RETRIES,
+    BuildResult,
+    build_template,
+    builder_input_text,
+    slugify,
+)
 
-__all__ = ["Check", "Diagnosis", "diagnose"]
+__all__ = [
+    "BUILDER_MAX_OUTPUT_TOKENS",
+    "DEFAULT_MAX_RETRIES",
+    "BuildResult",
+    "Check",
+    "Diagnosis",
+    "build_template",
+    "builder_input_text",
+    "diagnose",
+    "slugify",
+]

@@ -19,9 +19,17 @@ import typer
 from rich.console import Console
 from rich.panel import Panel
 from rich.progress import BarColumn, Progress, SpinnerColumn, TaskProgressColumn, TextColumn
-from rich.prompt import IntPrompt
+from rich.prompt import IntPrompt, Prompt
 
-from dugalaxy.authoring import Diagnosis, diagnose
+from dugalaxy.authoring import (
+    BUILDER_MAX_OUTPUT_TOKENS,
+    DEFAULT_MAX_RETRIES,
+    BuildResult,
+    Diagnosis,
+    build_template,
+    builder_input_text,
+    diagnose,
+)
 from dugalaxy.config.loader import load_config
 from dugalaxy.config.schema import Config
 from dugalaxy.cost.cache import ResponseCache
@@ -36,6 +44,7 @@ from dugalaxy.generator.core import RunResult, generate_dataset
 from dugalaxy.generator.grounding import ground_output, requires_model
 from dugalaxy.generator.interpolation import to_json
 from dugalaxy.providers import build_provider
+from dugalaxy.providers.base import ProviderError, TextProvider
 from dugalaxy.reporting.summary import duplicate_warning
 from dugalaxy.scenario import generate_scenario
 from dugalaxy.template.discovery import discover_templates
@@ -129,6 +138,7 @@ def _print_welcome() -> None:
         "[bold]Get started[/bold]\n"
         "  [cyan]dugalaxy gen quickstart[/cyan]         instant demo — no setup needed\n"
         "  [cyan]dugalaxy gen customer-support[/cyan]   model-written chats (needs a provider)\n"
+        '  [cyan]dugalaxy new "<description>"[/cyan]    draft a template from one sentence\n'
         "  [cyan]dugalaxy init[/cyan]                   scaffold your own template\n"
         "  [cyan]dugalaxy list[/cyan]                   see available templates\n"
         "  [cyan]dugalaxy doctor[/cyan]                 check your setup, fix what's missing\n\n"
@@ -191,7 +201,7 @@ def _guided_first_run() -> None:
             "  Stuck? Run [cyan]dugalaxy doctor[/cyan] to check your setup."
         )
     else:
-        _suggest_make_a_template()
+        _wizard_build_template()
 
 
 def _run_quickstart_win() -> None:
@@ -225,13 +235,119 @@ def _first_sample_line(result: RunResult) -> str | None:
     return None
 
 
-def _suggest_make_a_template() -> None:
-    """Point a user with no template at the fastest way to get one (pre-AI-builder)."""
+def _wizard_build_template() -> None:
+    """The wizard's no-template branch: draft one from a one-line description (AI builder)."""
+    console.print("\nNo problem — describe the data you want in one line and I'll draft it.")
     console.print(
-        "No problem — scaffold one to edit:\n"
-        "  [cyan]dugalaxy init my-dataset[/cyan]   then   [cyan]dugalaxy gen my-dataset[/cyan]\n"
-        "  See what's available:   [cyan]dugalaxy list[/cyan]\n"
-        f"  Template format guide:  [dim]{_TEMPLATE_GUIDE_URL}[/dim]"
+        "[dim]e.g. short angry support emails about late refunds, each with an order id "
+        "and a refund amount[/dim]"
+    )
+    description = Prompt.ask("Describe your data").strip()
+    if not description:
+        console.print('Nothing to build yet. When ready: [cyan]dugalaxy new "<description>"[/cyan]')
+        return
+
+    config = load_config(_resolve_config_path(None))
+    provider_obj = _ensure_model_interactive(config)
+    try:
+        if provider_obj is not None and not _confirm_builder_cost(
+            config, description, max_retries=DEFAULT_MAX_RETRIES, assume_yes=False
+        ):
+            console.print("Aborted.")
+            return
+        result = build_template(description, provider=provider_obj)
+    except (DugalaxyError, OSError) as exc:
+        err_console.print(f"[red]Couldn't create the template:[/red] {exc}")
+        return
+    _print_build_result(result)
+
+
+def _ensure_model_interactive(config: Config) -> TextProvider | None:
+    """Resolve a usable provider, or guide the user and return None for the example fallback.
+
+    A provider that needs a key but has none can't be built — rather than block, we show
+    the two ways to get a model and let the builder start the user from the closest
+    example. A local Ollama always "builds"; if it isn't actually running, the builder's
+    own provider-failure path falls back gracefully.
+    """
+    try:
+        return build_provider(config)
+    except ProviderError:
+        console.print(
+            "\nGenerating from your description needs a model:\n"
+            "  [bold]1[/bold] Free & local (recommended): install Ollama, then "
+            "[cyan]ollama pull llama3.2[/cyan]\n"
+            "  [bold]2[/bold] Hosted API: set your key's env var, then re-run "
+            "(check it with [cyan]dugalaxy doctor[/cyan])\n"
+            "For now, I'll start you from the closest example."
+        )
+        return None
+
+
+def _provider_or_none(config: Config) -> TextProvider | None:
+    """Build the configured provider, or None when no key is set (builder then falls back).
+
+    The non-interactive twin of :func:`_ensure_model_interactive`: ``dugalaxy new`` must
+    never block, so a missing key becomes an example fallback rather than an error.
+    """
+    try:
+        return build_provider(config)
+    except ProviderError:
+        return None
+
+
+def _confirm_builder_cost(
+    config: Config, description: str, *, max_retries: int, assume_yes: bool
+) -> bool:
+    """Apply the cost cap and gate before the builder spends money; True to proceed.
+
+    The builder makes up to ``max_retries + 1`` model calls. Local Ollama is free, so it
+    proceeds silently; a priced model under the cap also proceeds quietly (the plan asks
+    for no special UI on a cheap call); the cap is always enforced; and an *unpriced*
+    model — where we can't bound the bill — is hard-gated with a confirmation. Raises
+    :class:`DugalaxyError` (via :func:`enforce_cap`) when the estimate exceeds the cap.
+    """
+    if config.provider == "ollama":
+        return True
+
+    price_in, price_out, priced = resolve_pricing(config.provider, config.model, config)
+    estimate = estimate_run_cost(
+        n=max_retries + 1,
+        input_tokens_per_sample=estimate_tokens(builder_input_text(description)),
+        output_tokens_per_sample=BUILDER_MAX_OUTPUT_TOKENS,
+        price_per_1k_input=price_in,
+        price_per_1k_output=price_out,
+        priced=priced,
+        free=False,
+    )
+    enforce_cap(estimate, config.cost_cap_usd)
+
+    if priced:
+        return True  # under the cap and we know the price — proceed without ceremony
+    if assume_yes:
+        return True
+    _print_estimate(estimate)
+    return typer.confirm("cost unknown for this model — you may be billed. Proceed?")
+
+
+def _print_build_result(result: BuildResult) -> None:
+    """Tell the user what was created, honestly — a starting point, with the next command."""
+    if result.from_fallback:
+        console.print(
+            f"\n[yellow]Started you from the closest example[/yellow] "
+            f"([bold]{result.fallback_source}[/bold]) — couldn't use a model "
+            f"({result.last_error})."
+        )
+        console.print(
+            "  To draft from your description, set up a model — check it with "
+            "[cyan]dugalaxy doctor[/cyan]."
+        )
+    else:
+        console.print(f"\n[green]Created[/green] {result.path}  (a {result.output_shape})")
+    console.print(f"  file: [bold]{result.path}[/bold]")
+    console.print("  [dim]This is a starting point — skim it before a big run.[/dim]")
+    console.print(
+        f"Next: [cyan]dugalaxy gen {result.path}[/cyan]   (1 sample first; --n N for more)"
     )
 
 
@@ -286,6 +402,58 @@ def doctor(
         },
     )
     _print_diagnosis(diagnosis)
+
+
+@app.command()
+def new(
+    description: Annotated[str, typer.Argument(help="Describe the data you want, in one line.")],
+    name: Annotated[
+        str | None, typer.Option("--name", help="Name/slug for the template file.")
+    ] = None,
+    output_dir: Annotated[
+        Path | None, typer.Option("--output-dir", help="Where to write the template.")
+    ] = None,
+    provider: Annotated[
+        str | None, typer.Option("--provider", help="openai_compatible|anthropic|ollama.")
+    ] = None,
+    model: Annotated[str | None, typer.Option("--model", help="Model name.")] = None,
+    base_url: Annotated[
+        str | None, typer.Option("--base-url", help="Override the endpoint.")
+    ] = None,
+    api_key_env: Annotated[
+        str | None, typer.Option("--api-key-env", help="Env var with the key.")
+    ] = None,
+    config_path: Annotated[
+        Path | None, typer.Option("--config", help="Path to config.yaml.")
+    ] = None,
+    yes: Annotated[
+        bool, typer.Option("--yes", "-y", help="Skip the unpriced-model confirmation.")
+    ] = False,
+) -> None:
+    """Draft a template from a one-line description (AI builder)."""
+    try:
+        config = load_config(
+            _resolve_config_path(config_path),
+            overrides={
+                "provider": provider,
+                "model": model,
+                "base_url": base_url,
+                "api_key_env": api_key_env,
+            },
+        )
+        provider_obj = _provider_or_none(config)
+        if provider_obj is not None and not _confirm_builder_cost(
+            config, description, max_retries=DEFAULT_MAX_RETRIES, assume_yes=yes
+        ):
+            console.print("Aborted.")
+            raise typer.Exit(1)
+        result = build_template(
+            description, provider=provider_obj, name=name, output_dir=output_dir
+        )
+        _print_build_result(result)
+    except (DugalaxyError, OSError) as exc:
+        err_console.print(f"[red]Error:[/red] {exc}")
+        raise typer.Exit(1) from exc
 
 
 @app.command()

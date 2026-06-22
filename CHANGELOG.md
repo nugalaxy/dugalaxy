@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- AI template builder (`authoring/template_builder.py`) + `dugalaxy new "<description>"`:
+  drafts a template from one sentence. A model writes YAML; we validate it with the real
+  loader and, on failure, hand the legible error back to the model to fix (up to 3 tries).
+  Two safety guarantees: a draft is written only after it loads cleanly, and if no valid
+  template is produced (or no model is available) it copies the closest bundled example —
+  the user is never blocked or handed a broken file. The result is always presented as a
+  starting point, never as verified. The bare-`dugalaxy` "no template" branch now runs the
+  builder interactively (with model-bootstrap guidance); `new` is its non-interactive twin.
+  The prompt's grammar and faker-kind whitelist are derived from live code so they can't
+  drift from what the loader accepts. New `load_template_text()` validates YAML from memory.
 - Interactive guided first-run on bare `dugalaxy`: on a real terminal it leads a new
   user from a zero-setup win (runs the deterministic `quickstart` and shows one real
   sample) to the next step (`gen` if they have a template, else `init` — the seam

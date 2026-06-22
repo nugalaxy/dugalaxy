@@ -191,27 +191,42 @@ def load_template(path: Path) -> TemplateSpec:
     """Parse *path* into a validated :class:`TemplateSpec`, failing fast with legible errors.
 
     Raises:
+        TemplateLoadError: file read, YAML parse failure, or schema mismatch.
+        MissingReferenceError: A template expression names an undefined variable.
+        CyclicDependencyError: Composite variables have circular dependencies.
+    """
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise TemplateLoadError(f"Cannot read '{path}': {exc}") from exc
+    return load_template_text(text, source=f"'{path}'")
+
+
+def load_template_text(text: str, *, source: str = "the template") -> TemplateSpec:
+    """Validate template YAML *text* into a :class:`TemplateSpec`, with legible errors.
+
+    The shared core behind :func:`load_template`; it takes YAML already in memory so the
+    AI template builder can validate a model's output without writing a file first.
+    *source* names the origin in error messages (a path, or e.g. "the generated template").
+
+    Raises:
         TemplateLoadError: YAML parse failure or schema mismatch.
         MissingReferenceError: A template expression names an undefined variable.
         CyclicDependencyError: Composite variables have circular dependencies.
     """
     try:
-        raw = yaml.safe_load(path.read_text(encoding="utf-8"))
-    except OSError as exc:
-        raise TemplateLoadError(f"Cannot read '{path}': {exc}") from exc
+        raw = yaml.safe_load(text)
     except yaml.YAMLError as exc:
-        raise TemplateLoadError(f"Invalid YAML in '{path}': {exc}") from exc
+        raise TemplateLoadError(f"Invalid YAML in {source}: {exc}") from exc
 
     if not isinstance(raw, dict):
-        raise TemplateLoadError(
-            f"Template '{path}' must be a YAML mapping, got {type(raw).__name__}"
-        )
+        raise TemplateLoadError(f"{source} must be a YAML mapping, got {type(raw).__name__}")
 
     try:
         spec = TemplateSpec.model_validate(raw)
     except ValidationError as exc:
         raise TemplateLoadError(
-            f"'{path}' is not a valid template:\n{_format_validation_error(exc, raw)}"
+            f"{source} is not a valid template:\n{_format_validation_error(exc, raw)}"
         ) from exc
 
     _check_references(spec)
