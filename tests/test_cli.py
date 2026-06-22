@@ -348,3 +348,17 @@ def test_gen_cost_cap_blocks_run(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     )
     assert result.exit_code == 1
     assert "exceeds the cap" in result.stderr
+
+
+def test_doctor_hosted_missing_key_reports_and_exits_zero(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("DUGALAXY_NO_SUCH_KEY", raising=False)
+    result = runner.invoke(
+        app,
+        ["doctor", "--provider", "openai_compatible", "--api-key-env", "DUGALAXY_NO_SUCH_KEY"],
+    )
+    assert result.exit_code == 0
+    assert "environment check" in result.stdout
+    assert "DUGALAXY_NO_SUCH_KEY" in result.stdout
+    assert "Next:" in result.stdout

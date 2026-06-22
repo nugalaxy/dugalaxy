@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `dugalaxy doctor` (`authoring/diagnostics.py`): a plain-words environment health
+  check — config presence/validity, provider reachability (pings local Ollama),
+  hosted API-key presence (the named env var only, never its value), template count,
+  and output-directory writability — each rendered as a ✓/✗ line with a one-line fix,
+  ending in the single most useful next action. Reusable core for the guided
+  first-run flow. The command always exits 0 (a missing model is an expected state,
+  not an error — the zero-setup demo still works).
 - Initial project scaffold: package structure, tooling, license, docs, CI.
 - Template spec data model (`template/spec.py`): Pydantic models for `meta`,
   `scenario`, `output`, and `generation`, including discriminated unions for the

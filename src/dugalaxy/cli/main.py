@@ -20,6 +20,7 @@ from rich.panel import Panel
 from rich.progress import BarColumn, Progress, SpinnerColumn, TaskProgressColumn, TextColumn
 from rich.prompt import IntPrompt
 
+from dugalaxy.authoring import Diagnosis, diagnose
 from dugalaxy.config.loader import load_config
 from dugalaxy.config.schema import Config
 from dugalaxy.cost.cache import ResponseCache
@@ -97,6 +98,19 @@ def _galaxy_mark() -> str:
         return "*"
 
 
+def _status_marks() -> tuple[str, str]:
+    """The ✓/✗ marks where the terminal can render them, else ASCII fallbacks.
+
+    Legacy Windows consoles (e.g. cp1252) can't encode these glyphs; degrade to
+    plain text instead of emitting a replacement ``?`` for every check line.
+    """
+    try:
+        "✓✗".encode(sys.stdout.encoding or "utf-8")
+        return "✓", "✗"
+    except (LookupError, UnicodeEncodeError):
+        return "OK", "X"
+
+
 def _print_welcome() -> None:
     """Print a friendly branded welcome with the obvious next steps."""
     from dugalaxy import __version__
@@ -108,7 +122,8 @@ def _print_welcome() -> None:
         "  [cyan]dugalaxy gen quickstart[/cyan]         instant demo — no setup needed\n"
         "  [cyan]dugalaxy gen customer-support[/cyan]   model-written chats (needs a provider)\n"
         "  [cyan]dugalaxy init[/cyan]                   scaffold your own template\n"
-        "  [cyan]dugalaxy list[/cyan]                   see available templates\n\n"
+        "  [cyan]dugalaxy list[/cyan]                   see available templates\n"
+        "  [cyan]dugalaxy doctor[/cyan]                 check your setup, fix what's missing\n\n"
         "[bold]Learn[/bold]\n"
         f"  Getting started   [dim]{_GETTING_STARTED_URL}[/dim]\n"
         f"  Template format   [dim]{_TEMPLATE_GUIDE_URL}[/dim]\n"
@@ -147,6 +162,35 @@ def list_templates() -> None:
             + (f" — {info.description}" if info.description else "")
         )
     console.print("\nRun one with: [cyan]dugalaxy gen <name>[/cyan]")
+
+
+@app.command()
+def doctor(
+    provider: Annotated[
+        str | None, typer.Option("--provider", help="openai_compatible|anthropic|ollama.")
+    ] = None,
+    model: Annotated[str | None, typer.Option("--model", help="Model name.")] = None,
+    base_url: Annotated[
+        str | None, typer.Option("--base-url", help="Override the endpoint.")
+    ] = None,
+    api_key_env: Annotated[
+        str | None, typer.Option("--api-key-env", help="Env var with the key.")
+    ] = None,
+    config_path: Annotated[
+        Path | None, typer.Option("--config", help="Path to config.yaml.")
+    ] = None,
+) -> None:
+    """Check your environment and tell you the one thing to do next."""
+    diagnosis = diagnose(
+        config_path=config_path,
+        overrides={
+            "provider": provider,
+            "model": model,
+            "base_url": base_url,
+            "api_key_env": api_key_env,
+        },
+    )
+    _print_diagnosis(diagnosis)
 
 
 @app.command()
@@ -303,6 +347,24 @@ def gen(
 
 
 # ──────────────────────────── helpers ────────────────────────────
+
+
+def _print_diagnosis(diagnosis: Diagnosis) -> None:
+    """Render the doctor's checks as ✓/✗ lines plus the single next action.
+
+    Always exits 0: ``doctor`` reports health, it does not fail. A missing model is
+    an expected state (the zero-setup demo still works), not an error — the
+    next-action line carries the signal a script would read.
+    """
+    ok_mark, bad_mark = _status_marks()
+    arrow = "→" if ok_mark == "✓" else "->"
+    console.print("[bold]Dugalaxy environment check[/bold]\n")
+    for check in diagnosis.checks:
+        mark = f"[green]{ok_mark}[/green]" if check.ok else f"[red]{bad_mark}[/red]"
+        console.print(f"  {mark} [bold]{check.label}[/bold]: {check.detail}")
+        if not check.ok and check.fix:
+            console.print(f"      [dim]{arrow} {check.fix}[/dim]")
+    console.print(f"\n[bold]Next:[/bold] {diagnosis.next_action}")
 
 
 def _choose_template() -> str:
