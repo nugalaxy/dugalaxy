@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-06-22
+
+First public release.
+
 ### Changed
 - Rewrote the README and `docs/getting-started.md` around the guided flow: the README now
   leads with the one-sentence AI-builder hook and four literal numbered steps
