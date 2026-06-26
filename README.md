@@ -6,16 +6,14 @@
 
 # Dugalaxy
 
-**Describe the data you want in one sentence — get a template that generates endless varied, consistent, validated samples forever. No re-prompting.**
+**Ask a chatbot for test data and you get five samples that drift, repeat, and contradict each other. Dugalaxy gives you a reusable _template_ instead — describe it once, generate thousands of varied, consistent, validated samples. Offline. Reproducible. No re-prompting.**
 
-A chatbot gives you five samples that drift, repeat, and contradict each other. Dugalaxy
-gives you a reusable *template*: a seeded engine invents the ground-truth facts, the model
-writes only the prose around them, and every sample is checked and written to disk. Flat
-cost, reproducible, thousands of samples from one command — and you don't even have to write
-the template by hand.
+Under the hood, a seeded engine invents the ground-truth facts, the model writes only the
+prose around them, and every sample is checked and written to disk. Flat cost, reproducible,
+thousands of samples from one command — and you don't even have to write the template by hand.
 
-> **Status:** Early and actively built in the open by a solo developer. v1 focuses on
-> **Template mode**. Expect rapid iteration. Issues and feedback are very welcome.
+> **Status:** Early and actively built in the open. v1 focuses on **Template mode**.
+> Expect rapid iteration. Issues and feedback are very welcome.
 
 ---
 
